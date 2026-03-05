@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="./kep/bongeszo/level.png" type="image/x-icon" />
+<title>ÖKO Lábnyom | Részletes Kiértékelés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+:root{
+  --primary: #23a65a;
+  --primary-dark: #1f8e4b;
+  --glass-border: rgba(255,255,255,0.06);
+  --text-main: #ffffff;
+  --transition-fast: all 0.12s cubic-bezier(0.4,0,0.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background: #0f172a;
+  color:var(--text-main);
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
+#bg-layer{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none;opacity:1;transition:opacity .4s ease}
+
+.main-content{flex:1;display:flex;align-items:center;justify-content:center;width:100%;padding:2rem 0;z-index:10;}
+
+.container{width:80%; max-width:1100px; min-width:320px; perspective:1000px; margin:0 auto}
+
+.calc-card{
+  background: linear-gradient(135deg, rgba(10,12,16,0.94), rgba(20,25,35,0.92));
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);
+  padding:2.5rem; border-radius:30px;
+  box-shadow:0 40px 80px rgba(0,0,0,.8);
+  text-align:center; position:relative;
+  overflow:hidden;
+}
+
+h1{font-weight:800;font-size:1.6rem;margin-bottom:.8rem;color:var(--text-main)}
+p{color:rgba(255,255,255,.95);font-size:.85rem;line-height:1.4;margin-bottom:1rem}
+
+.meta-uppercase{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--primary);}
+
+.btn{
+  padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.05);backdrop-filter:blur(12px);
+  font-size:.95rem;font-weight:600;cursor:pointer;color:#ffffff;transition:var(--transition-fast);
+  text-decoration: none; display:inline-flex;align-items:center;justify-content:center;
+}
+.btn:hover{transform:translateY(-2px);background:var(--primary);border-color:var(--primary);}
+
+.result-value{font-size:3.5rem;font-weight:800;color:var(--primary);margin:10px 0}
+
+#detailed-report{margin-top:2rem; text-align: center;}
+.category-section{margin:2.5rem 0; padding:1.5rem 0; border-radius:20px; overflow:hidden;}
+.category-header{
+  font-size:1.1rem; font-weight:700; text-transform:uppercase;
+  color:var(--primary); margin: 0 1.5rem 1.5rem 1.5rem;
+  display:flex; align-items:center; justify-content: flex-start; gap:15px;
+  border-bottom: 1px solid rgba(35,166,90,0.3);
+  padding-bottom: 0.5rem;
+}
+.cat-points{ font-size: 1rem; color: rgba(255,255,255,0.6); font-weight: 500; }
+
+.report-item{ background:rgba(255,255,255,0.03); border-radius:16px; padding:1.5rem; margin:0 1.5rem 1rem 1.5rem; border:1px solid rgba(255,255,255,.05); text-align: center; }
+.q-title{font-weight:700; font-size:1rem; margin-bottom:0.6rem; color:rgba(255,255,255,0.95);}
+.user-answer{font-size:0.9rem; color:var(--primary); margin-bottom:1rem; font-weight:500;}
+
+.tip-box{ font-size:0.85rem; line-height:1.6; color:#ffffff; padding: 0 10%; border-left: none; }
+
+@media (max-width:800px){
+  .container{width:80%;}
+  .calc-card{padding:1.5rem 1rem;}
+  .tip-box{padding: 0 2%;}
+}
+</style>
+</head>
+<body>
+
+<div id="bg-layer"></div>
+
+<div class="main-content">
+  <div class="container">
+    <div class="calc-card">
+      <div class="meta-info">
+        <div id="res-nickname" style="text-align:center;margin-bottom:.4rem;font-size:1.4rem;font-weight:700;color:var(--text-main);"></div>
+        <div id="res-tonnes" class="result-value">0,00 t</div>
+        <p style="font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:0">éves CO₂ kibocsátás</p>
+        <div id="res-category" class="meta-uppercase" style="margin-top:0.6rem;">--</div>
+        <div id="res-points" style="margin-top:0.4rem;color:var(--primary);font-weight:700;">0 / 0 pont</div>
+        <p id="score-info" style="margin-top:0.6rem;font-size:0.75rem;line-height:1.4;color:rgba(255,255,255,0.85);">Pontszám = az összes kérdéshez rendelt pont összegéből (0–1250) osztva 250, így kapod a CO₂-értéket tonnában.</p>
+        <p id="category-ranges" style="margin-top:0.4rem;font-size:0.75rem;line-height:1.4;color:rgba(255,255,255,0.85);">Eredménykategóriák: 0–2 t = Ökológiai Úttörő; 2–5 t = Tudatos Utazó; 5–8 t = Kiegyensúlyozott Fogyasztó; 8–12 t = Nagy Lábnyomú; &gt;12 t = Kritikus Hatás.</p>
+      </div>
+
+      <div id="detailed-report"></div>
+
+      <div style="text-align:center; margin-top:2rem; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <a href="index.html" class="btn">Vissza a kvízhez</a>
+        <button onclick="generateCertificatePDF()" class="btn" id="pdf-btn" style="font-family: inherit;">Oklevél megtekintése</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const bgFood = "./kep/kviz/tapl-bg.jpg";
+const bgHome = "./kep/kviz/otthon-bg.jpg";
+const bgTransport = "./kep/kviz/kozl-bg.jpg";
+const bgShopping = "./kep/kviz/vasarl-bg.jpg";
+const bgWaste = "./kep/kviz/szemet-bg.jpg";
+const bgWater = "./kep/kviz/viz-bg.jpg";
+
+const questions = [
+  { q: "Milyen étrendet követsz a hét legtöbb napján?", bg: bgFood, opts: [
+    { text: "Vegán", points: 10, tip: "<strong>Tanács: </strong>Figyelj a B12-vitamin pótlására és a teljes értékű fehérjeforrásokra (hüvelyesek, szója, tofu, tempeh, teljes kiőrlésű gabonák). Tervezd meg a heti menüt, hogy minden esszenciális aminosav és vas be legyen építve (pl. lencse+gabona kombinációk). Érdemes algákból vagy diófélékből omega-3 forrásokat beépíteni, illetve évente egy vérképet nézetni (B12, ferritin).<br><br><strong>Érdekesség: </strong>A növényi alapú étrend gyakran alacsonyabb közvetlen állati eredetű kibocsátással jár, de a kiegyensúlyozottság és a megfelelő tápanyagbevitel kulcs." },
+    { text: "Vegetáriánus", points: 20, tip: "<strong>Tanács: </strong>Használj különböző fehérjeforrásokat (tojás, tejtermékek, hüvelyesek, gabonák, magvak) és figyelj a vas- és B12-ellátottságra (különösen nők és sportolók). Cseréld a feldolgozott sajtok/felvágottak arányát teljes értékű növényi alapokkal, és építs be rendszeresen zöld leveleseket és csonthéjasokat az ásványi anyagokért. <br><br><strong>Érdekesség: </strong>Vegetáriánus étrend jó alapja a fenntartható étkezésnek — de a feldolgozott tejtermékek és tojás minősége is számít a környezeti hatásban." },
+    { text: "Vegyes", points: 50, tip: "<strong>Tanács: </strong>Törekedj a növényi alapú ételek (zöldségek, hüvelyesek, teljes kiőrlés) dominanciájára, és korlátozd a feldolgozott hústermékeket. Vezess be heti „növényi napokat” (pl. 2–3 nap növényi alapú), és tartsd szem előtt a szezonális, helyi alapanyagokat. <br><br><strong>Érdekesség: </strong>A „flexitarian” (rugalmas növényi) megközelítés sok ember számára elérhető út a fogyasztás csökkentésére anélkül, hogy drasztikusan megváltoztatná az ízlést." },
+    { text: "Húsközpontú", points: 100, tip: "<strong>Tanács: </strong>Csökkentsd a vörös- és feldolgozott húsok arányát, válassz kisebb adagokat és jobb minőségű forrásokat (legjobb helyi, átlátható gazdaságból). Kompenzáció helyett célzottan növeld a zöldség-, hüvelyes- és teljes kiőrlésű gabonabevitelt. Vizsgáld meg a hús gyakoriságát és a főzés módját (grillezés helyett párolás/roston is csökkenthető a kár). <br><br><strong>Érdekesség: </strong>A húsdomináns táplálkozás egyszerre növeli az élelmiszer-költséget és az ökológiai lábnyomot — kis adagcsökkentés is látványos hatású." },
+    { text: "Húst hússal", points: 140, tip: "<strong>Tanács: </strong>Ez a minta a legintenzívebb környezeti és egészség szempontból; javasolt heti tervet kidolgozni, ami heti 2–3 növényi napot tartalmaz. Válassz soványabb és alacsonyabb emissziójú fehérjeforrásokat (például baromfi, hüvelyesek), és minimalizáld a feldolgozott vörös húsokat. Kérj dietetikai tanácsot, ha változtatni szeretnél. <br><br><strong>Érdekesség: </strong>Nagy mennyiségű hús fogyasztása egészségügyi kockázatokkal és magasabb élelmiszer-ökológiai lábnyommal jár — a „hús helyett növény” cserék gyors eredményt adnak." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong>Dokumentáld heti mintáidat (miért változik: esemény, munkarend, utazás), és határozz meg 2–3 egyszerű szabályt (pl. heti 3 növényi nap, maximum 2 vörös húsos étkezés/hét). Használd a változatosságot erőforrásként: ha van húsos nap, legyen kisebb adagos és kísérőként sok zöldség.<br><br><strong>Érdekesség: </strong>Változékonyság lehetőség is: apró strukturált szabályokkal gyorsan csökkenthető a teljes hatás." }
+  ]},
+  { q: "Milyen gyakran eszel vörös húst (marha, sertés, bárány)?", bg: bgFood, opts: [
+    { text: "Soha", points: 5, tip: "<strong>Tanács: </strong> Ha kerülöd a vörös húst, gondolj a vas és B12 megfelelő pótlására növényi/állati alternatívákkal (hüvelyesek + C-vitamin az iron felszívódásért; B12-kiegészítés növényi étrendben). Használd ki az alacsonyabb kibocsátásban rejlő előnyt és fókuszálj helyi, szezonális növényi alapokra. <br><br><strong>Érdekesség: </strong>A vörös húsok elkerülése egyszerre javíthatja az egészség-kockázatokat és csökkentheti az élelmiszerrel kapcsolatos CO₂-lábnyomot." },
+    { text: "Havonta", points: 20, tip: "<strong>Tanács: </strong> Havonta fogyasztás alacsonynak számít — törekedj a minőségre (származás, takarmányozás), és használd a vörös hús fogyasztását különleges alkalomnak. Pótold gyakran hüvelyesekkel és halakkal a fehérjét. <br><br><strong>Érdekesség: </strong>Ritka vörös húsfogyasztással a teljes étrendi kibocsátás jelentősen alacsonyabb, különösen ha a helyi alapanyagokat részesíted előnyben." },
+    { text: "Heti 1-2 alkalommal", points: 50, tip: "<strong>Tanács: </strong> Ez mérsékelt használat — csökkentsd a pótlékokkal (bab, lencse) és válassz kisebb adagokat, valamint főzési módokat, amelyek nem növelik túlzottan a zsiradékfelhasználást. Keresd a fajtától függő fenntarthatóbb választásokat. <br><br><strong>Érdekesség: </strong>Heti 1–2 vöröshús-adagnál már érdemi egészségügyi és környezeti javulás érhető el, ha ezeket részben növényi alternatívákra cseréled." },
+    { text: "Heti 3-5 alkalommal", points: 90, tip: "<strong>Tanács: </strong> Jelentős arány — javaslom a heti frekvencia felülvizsgálatát: cél, hogy heti 1–2 alá csökkentsd. Tegyél be helyette hüvelyes napokat, zöldségcentrikus köreteket és halas alternatívát. Figyeld a vörös hús mennyiségét adagonként (kisebb adag = kevesebb hatás). <br><br><strong>Érdekesség: </strong>Gyakori vörös húsfogyasztás egyrészt egészségi kockázattal (bizonyos betegségek), másrészt lényegesen nagyobb ökológiai lábnyommal jár, mint a növényi alternatívák." },
+    { text: "Minden nap", points: 130, tip: "<strong>Tanács: </strong> Sürgős stratégia-váltás javasolt: heti menütervezés, húsmentes napok bevezetése, és ha szükséges, dietetikus bevonása az egészséges, csökkentett húsfogyasztást támogató átálláshoz. Kisebb adagmennyiség és jobb minőség segít az átmenetben. <br><br><strong>Érdekesség: </strong>Napi vörös hús fogyasztása az étrendi kibocsátás és bizonyos egészségkockázatok szempontjából a legkedvezőtlenebb minták közé tartozik." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong> Jegyezd fel, mi váltja ki a magasabb fogyasztást (ünnep, stressz, kényelem), és építs be egyszerű szabályokat (pl. ha hús van, legyen legfeljebb 150 g/adag; heti 2 „no red meat” nap). Kis rutinszabályok sokat segítenek. <br><br><strong>Érdekesség: </strong>Változó mintákat könnyű strukturált döntésekkel optimalizálni: ha tudod mikor eszel többet, könnyebb alternatívákat beilleszteni." }
+  ]},
+  { q: "Mekkora részét teszi ki a kosaradnak a helyi, szezonális alapanyag?", bg: bgFood, opts: [
+    { text: "80-100%", points: 10, tip: "<strong>Tanács: </strong> Kiváló — fejleszd be tartósítási technikákat (befőzés, fagyasztás, fermentálás), hogy télen is minél nagyobb rész helyi maradjon. Avatkozz be a beszállítói láncba (közvetlen termelői vásár, közösségi mezőgazdaság — CSA) és kommunikáld is ezt a választást. <br><br><strong>Érdekesség: </strong>Helyi-szezonális élelmiszer jelentősen csökkenti a szállításból és csomagolásból eredő környezeti terhelést, és gyakran jobb a frissessége/tápanyagtartalma." },
+    { text: "Kb. a fele (50%)", points: 30, tip: "<strong>Tanács: </strong> Törekedj növelni a helyi arányt: tervezd a heti menüt a piac kínálata alapján, vegyél többet szezonális zöldségből és fagyaszd le többletet. Kapcsolódj helyi termelői csoportokhoz, és cseréld a import alapanyagokat helyiekre, ahol lehetséges. <br><br><strong>Érdekesség: </strong>50% jó alap — egy kis tervezéssel és befőzéssel könnyen növelhető a helyi részarány." },
+    { text: "Kevés (20%)", points: 60, tip: "<strong>Tanács: </strong> Kezdd a prioritásokkal: mely alapanyagok könnyen helyettesíthetők helyivel (zöldségek, tejtermékek)? Látogass el heti piacokra, és építs be 2–3 teljesen helyi napot hetente. Vizsgáld meg a tárolási/csere lehetőségeket, hogy csökkentsd az importfüggést. <br><br><strong>Érdekesség: </strong>Kis változtatások (helyi termék választása egy-két nyersanyagban) észrevehető csökkentést eredményezhetnek a szállítási lábnyomban." },
+    { text: "Szinte semmi (0%)", points: 100, tip: "<strong>Tanács: </strong> Alapvető szemléletváltás javasolt: fedezd fel a helyi piacot, tanulj meg szezonális recepteket és cseréld le/import alapanyagokat helyi alternatívákra. Kezdj egyszerűen: heti 1 „teljesen helyi” étkezés, majd növeld. <br><br><strong>Érdekesség: </strong>0% gyakran logisztikai/komfort oka van — a helyi kínálat megismerése gyorsan változtatja ezt a szokást." },
+    { text: "Csak importot veszek", points: 130, tip: "<strong>Tanács: </strong> Vizsgáld meg az okokat (ár, minőség, hozzáférés) és keress helyi alternatívákat (kis csomagok, más bolt, termelői piac). Kezdd azzal, hogy egy import terméket helyettesítesz hetente. <br><br><strong>Érdekesség: </strong>Importált élelmiszerek sokszor távolról érkeznek, magasabb szállítási és csomagolási lábnyommal; helyi átállás anyagilag is jól működhet hosszabb távon." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong> Mérd a havi arányt és állíts fel célokat (pl. havonta +10% helyi alapanyag). Használj menütervezést és alkalmazkodj a szezonhoz — a rugalmasságod egy erőforrás, használd ki. <br><br><strong>Érdekesség: </strong>Változó vásárlásnál rugalmas menütervezéssel és fagyasztással könnyű növelni a helyi részarányt." }
+  ]},
+  { q: "Mennyi élelmiszert dobsz ki (ételpazarlás)?", bg: bgFood, opts: [
+    { text: "Semennyit", points: 5, tip: "<strong>Tanács: </strong> Kiváló — rögzíts jó gyakorlataidat és oszd meg őket (menütervezés, maradék újrahasznosítás, megfelelő tárolás). Gondolkodj előreláthatóan: készíts vészhelyzeti listát, mire hasznosíthatók a maradékok. <br><br><strong>Érdekesség: </strong>Nulla pazarlás kevés háztartásra jellemző; az, aki eléri, jelentős anyagi és környezeti előnyt élvez." },
+    { text: "Havonta egy keveset", points: 25, tip: "<strong>Tanács: </strong> Jó eredmény — finomhangold a bevásárlást és adagolást, használj FIFO (first in, first out) rendszert a hűtőben, és tanulj néhány maradékreceptet. Fagyasztás és konzerválás sokat segít. <br><br><strong>Érdekesség: </strong>Kis heti javulások évi szinten jelentős hulladékcsökkentést adnak." },
+    { text: "Hetente egy kukányit", points: 60, tip: "<strong>Tanács: </strong> Elemezd mi marad meg (zöldség, kenyér, főtt étel) és célzott stratégiákat alkalmazz: pontos adagolás, maradék ételek beépítése más fogásokba, és korszerű tárolás (vákuum, légmentes doboz). <br><br><strong>Érdekesség: </strong>Heti egy kuka jelentős éves pazarlást jelent — egyszerű rutinváltásokkal ez gyorsan csökkenthető." },
+    { text: "Gyakran romlik meg", points: 100, tip: "<strong>Tanács: </strong> Vizsgáld a hűtő beállításait (hőmérséklet), tárolási módokat és a bevásárlási mennyiséget. Használj tároló rendszert, hogy a szem előtt lévő termékek fogyjanak el először. Tervezd a heti menüt az expiring-by sorrend alapján. <br><br><strong>Érdekesség: </strong>Gyakori romlás gyakran rossz tárolás vagy túl nagy bevásárlás következménye — technikai beavatkozással javítható." },
+    { text: "Napi szinten dobok ki", points: 140, tip: "<strong>Tanács: </strong> Azonnali változtatás szükséges: napi vásárlás, túlzott adagok, rossz tárolás oka lehet. Kezdd menütervezéssel, adagkontrollal, maradékok kreatív újrahasznosításával és komposztálással. Kérj segítséget — sok app és módszer segít a pazarlás csökkentésében.<br><br><strong>Érdekesség: </strong>Napi dobálás költséges és környezetszennyező; a megtakarítási potenciál óriási, ha csak a felére csökkented." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong> Jegyezd, mely napokon pazarolsz többet (hétvége, vendégség) és készíts ellenintézkedéseket (adagszabályok, nagyobb ételek fagyasztása). Készíts „maradéknapot” a héten, amikor kreatívan felhasználod, ami megmaradt. <br><br><strong>Érdekesség: </strong>Változó pazarlásnál a napirend és események egyszerű átstrukturálása nagy hatással van." }
+  ]},
+  { q: "Milyen gyakran fogyasztasz feldolgozott, előrecsomagolt vagy gyorséttermi ételt?", bg: bgFood, opts: [
+    { text: "Soha", points: 10, tip: "<strong>Tanács: </strong> Kiváló — tartsd meg a főzési szokásokat, és figyeld a táplálkozási egyensúlyt (változatos zöldségek, teljes értékű gabonák, megfelelő fehérje). Ossz meg inspirációt és tippeket a közönséggel. <br><br><strong>Érdekesség: </strong>A feldolgozatlan, otthon főzött ételek általában kisebb csomagolási hulladékkal és alacsonyabb rejtett CO₂-vel járnak." },
+    { text: "Havi 1-2 alkalommal", points: 30, tip: "<strong>Tanács: </strong> Jó kompromisszum — használd ezeket az alkalmakat jutalomként; közben figyelj a nagy adagok elkerülésére és válassz egészségesebb opciókat (saláta, grillezett fehérje). Tervezd a heti főzést, hogy a gyorsétel ne váljon rutinná. <br><br><strong>Érdekesség: </strong>Ritka gyorsétel- vagy készétel-fogyasztás kis hatással van az összképre, ha az alapvető étrend egészséges." },
+    { text: "Heti 1 alkalommal", points: 55, tip: "<strong>Tanács: </strong> Korlátozd a heti egy alkalomra; válassz minőségi helyeket, ahol transzparens az összetevők listája, vagy előre csomagolt esetén olvasd az összetevőket. Készíts otthon gyors, egészséges alternatívákat (meal prep). <br><br><strong>Érdekesség: </strong>Heti 1-2 gyorsétkezés általában nem jelent drámai hatást, de hajlamos könnyen növekedni — figyelni kell a gyakoriságra." },
+    { text: "Heti 2-4 alkalommal", points: 90, tip: "<strong>Tanács: </strong> Ez már jelentős; csökkentsd a gyakoriságot fokozatosan: otthoni gyorsreceptek, előre elkészített, friss alapanyagokból készült „gyors” fogások és jobb választások (kevesebb feldolgozott összetevő). Vizsgáld a pénzügyi és egészségügyi motivációkat.<br><br><strong>Érdekesség: </strong>Gyakori feldolgozott étel fogyasztásnál a rejtett só-, zsír- és csomagolási terhelés nő meg." },
+    { text: "Minden nap", points: 130, tip: "<strong>Tanács: </strong> Erőteljes változtatás ajánlott: heti menütervezés, egyszerű főzés alapok elsajátítása (1–2 alapétel, amit mindig gyorsan össze lehet dobni), és a feldolgozott ételek fokozatos kiváltása. Fontold meg dietetikus bevonását az étrend egészségessé tételéhez. <br><br><strong>Érdekesség: </strong>Napi gyorsétel/előrecsomagolt étel jelentősen növeli a feldolgozott összetevők és csomagolóanyagok miatti környezeti terhelést, valamint egészségügyi kockázatokat." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong> Kövesd nyomon, mikor fordul elő gyakrabban a feldolgozott étel (pl. munkaidő, fáradtság), és építs be egyszerű, gyors otthoni alternatívákat. Meal-prep (előre elkészített alapok) segít a kontrollban. <br><br><strong>Érdekesség: </strong>Változó minta jól optimalizálható szervezéssel — ha a „miért” mögött megoldást találsz (idő/energia), csökken a kényszerű gyorsétel fogyasztás." }
+  ]},
+
+  { q: "Mekkora fűtött alapterületen élsz?", bg: bgHome, opts: [
+    { text: "40 m² alatt", points: 15, tip: "<strong>Tanács: </strong> Kis lakásnál is nagyon fontos a hőveszteség csökkentése: szigeteld a külső ajtó körüli réseket, fókuszálj ablakok zárására (tömítések cseréje) és használj programozható termosztátot vagy helyi szenzort a precíz hőfokszabályozáshoz. Ha bérlő vagy, egyszerű, könnyen visszabontható megoldások (radiátor fólia, vastagabb függöny) is sokat számítanak. <br><br><strong>Érdekesség: </strong>Egy jól lezárt, 40 m² alatti lakás fűtési igénye arányosan kisebb, de a légcserén és a rossz szigetelésen keresztül arányosan nagyobb relatív hőveszteséget szenvedhet — ezért kis terekben a tömörítés/lezárás különösen hatékony beruházás." },
+    { text: "40-80 m²", points: 40, tip: "<strong>Tanács: </strong> Optimalizáld a zónavezérlést: ha több helyiség van, használj termosztatikus radiátorfejeket vagy helyiségenkénti szabályzást, és szigeteld a külső falakat/ablakokat prioritás szerint. Vizsgáld meg az ablakok árnyékolását nyáron (passzív hűtés) és a radiátorok előremenő-járatait (levegőbuborékok légtelenítése).<br><br><strong>Érdekesség: </strong>Közepes méretű lakásoknál 1–2 °C hőmérsékletcsökkentés jelentős, akár 6–10% fűtési energia-megtakarítást is hozhat évenként." },
+    { text: "80-150 m²", points: 70, tip: "<strong>Tanács: </strong> Itt már érdemes átgondolni az épületgépészeti hatékonyságot: hőszivattyúra való átállás, hővisszanyerős szellőztetés vagy a kazán kondenzációs típussá cserélése komoly megtakarítást hozhat. Ellenőriztesd a padló-, fal- és tető-szigetelést; kisebb hézagok és gyenge csomópontok nagy energiaveszteséget okoznak. <br><br><strong>Érdekesség: </strong>100 m² körül a fűtési rendszer hatásfoka és a ház szigetelési szintje már többet számít, mint a lakók száma — egy korszerűsítés megtérülése gyorsabban jön vissza, mint kisebb lakásoknál." },
+    { text: "150-250 m²", points: 110, tip: "<strong>Tanács: </strong> Nagyobb területen zónaalapú fűtésvezérlést, helyiségenként programozható termosztátokat és esetleg talaj-/levegő hőszivattyút javaslok. Emellett járd végig a légcsatornákat, radiátorok és padlófűtés hurkok hidraulikai kiegyenlítését — a rossz keringés miatt nagy a hatásfokveszteség. Energetikai audit erősen ajánlott (hőkamerás vizsgálat). <br><br><strong>Érdekesség: </strong>Nagy alapterületeknél a lokális energiahatékonysági intézkedések (pl. termosztát-programozás) rövid távon is jelentős megtakarítást adhatnak, mert a fűtési energiaköltség bázisa nagy." },
+    { text: "250 m² felett", points: 150, tip: "<strong>Tanács: </strong> Ez már épületként kezelendő: komplex energetikai tervezés, hőszivattyú-rendszer, napkollektorok vagy napelemes kombináció, korszerű hővisszanyerős szellőzés és nagy teljesítményű hőszigetelés szükséges. Dolgozz épületgépész tervezővel; hasznos pályázati/finanszírozási lehetőségeket is felkutatni. <br><br><strong>Érdekesség: </strong>Nagy házakban a fajlagos fűtési energia (kWh/m²) rosszabb lehet, ha nincs zóna- és szabályozás-optimalizálás — ezért a rendszertervezés döntő." },
+    { text: "Nem tudom", points: 50, tip: "<strong>Tanács: </strong> Mérd fel pontosan a fűtött alapterületet (hasznos négyzetméter), mert a számítások és javaslatok erre épülnek. Egy egyszerű mérés, vagy a lakás alaprajzának áttekintése gyorsan tisztázza a kategóriát; utána célzott megtakarítási lépéseket lehet javasolni. <br><br><strong>Érdekesség: </strong>Sok ember alul- vagy felméri az alapterületet (pl. erkélyt nem számolja), pedig a fűtési igény pontos becslése függ attól, hogy mely területek vannak valóban fűtve." }
+  ]},
+  { q: "Mi az elsődleges fűtési módod?", bg: bgHome, opts: [
+    { text: "Megújuló (pl. hőszivattyú)", points: 5, tip: "<strong>Tanács: </strong> Hőszivattyú esetén optimalizáld a rendszer üzemét: megfelelő szigetelés, alacsony előremenő hőmérsékletű padlófűtés vagy nagy teljesítményű radiátorok; vezéreld éjszakai csökkentéssel és időjárás-követő szabályozással. Rendszeresen szervizeld a készüléket, és ha van lehetőség, integráld napelemmel az elektromos ellátást a teljes hatékonyság növeléséhez. <br><br><strong>Érdekesség: </strong>Hőszivattyúk jól működnek alacsonyabb előremenő hőmérsékleten — ezért a ház hőveszteségének csökkentése és a padlófűtés előnyösebb kombináció." },
+    { text: "Távhő / Kondenzációs gáz", points: 30, tip: "<strong>Tanács: </strong> Távhő esetén a saját hőszabályozás (helyiségenkénti szelepek, termosztátok) és a radiátorok légtelenítése növelheti a komfortot és csökkentheti a felesleges fogyasztást. Kondenzációs kazánnál ellenőrizd a rendszer évenkénti beállítását, a kondenzvíz-elvezetést és a hatékony korszerű kazánhasználatot (alacsony előremenő hőmérséklet, moduláció). <br><br><strong>Érdekesség: </strong>Kondenzációs rendszerek a fűtési idényben kedvezőbb hatásfokot érnek el, ha a radiátorok/hőleadók alacsonyabb hőmérsékleten működnek — ezért a rendszer összehangolása fontos." },
+    { text: "Hagyományos gáz", points: 70, tip: "<strong>Tanács: </strong> Ha hagyományos (non-kondenzációs) gázkazánod van, gondolkodj kondenzációs kazánra való cserén vagy hibrid megoldáson: korszerűbb készülék 10–25% üzemanyag-megtakarítást hozhat. Emellett rendszeres karbantartás, megfelelő égéstér-beállítás és hőleadók légtelenítése javasolt. <br><br><strong>Érdekesség: </strong>Egy elavult gázkazán évente jelentős többletfogyasztást okozhat — cseréje gyorsan megtérülhet a mai gázár-szintek mellett." },
+    { text: "Vegyes tüzelés", points: 100, tip: "<strong>Tanács: </strong> Vegyes tüzelésnél minimalizáld a szilárd tüzelőanyagok használatát, válassz tisztább faaprítékot vagy pelletet, és ügyelj a modern, jól szigetelt tűzterekre, valamint katalizátorra/rezervkályhára, ha lehetséges. Figyelj a hatékony égésre (száraz fa, megfelelő huzat) és a helyi levegőminőségi szabályok betartására. <br><br><strong>Érdekesség: </strong>A vegyes tüzelés gyakran alacsony költségű tüzelőanyagot kínál, de ha nem hatékony a tűztér és nedves a fa, a kibocsátás és a veszteség jelentősen nő." },
+    { text: "Szén / Olaj", points: 150, tip: "<strong>Tanács: </strong> Szén vagy olaj használata esetén sürgősen fontold meg a modern alternatívákat (hőszivattyú, kondenzációs kazán, biomassza-korszerűsítés), mert ezek a tüzelőanyagok nagyon magas CO₂- és egyéb károsanyag-kibocsátással járnak. Ha cserére még nincs lehetőség, optimalizáld a kazán hatásfokát és csökkentsd a hőmérsékletet ésszerűen. <br><br><strong>Érdekesség: </strong>Szén és olaj fosszilis energiahordozók; használatuk nemcsak CO₂-t, hanem ként, részecskéket is kibocsát — ezért sok helyen jogszabályi ösztönzés irányul ezek kivezetésére." },
+    { text: "Társasházi átlag", points: 50, tip: "<strong>Tanács: </strong> Ha társasházban élsz és a fűtés központi, kezdeményezz közös energetikai auditot, zónázást és a felhasználás mérés-alapú elszámolását (átfolyásmérők, lakásonkénti szabályozás). Kisebb beavatkozások (radiátor-szelepek, légtelenítés, helyiségtakarékosság) lakásonként is hozhatnak javulást. <br><br><strong>Érdekesség: </strong>Társasházaknál a közös döntések (szigetelés, kazáncsere) hatása sokszor nagyobb és hatékonyabb, mint egyéni intézkedések — ezért érdemes közösségi kezdeményezést indítani." }
+  ]},
+  { q: "Hány fok van otthon a fűtési szezonban?", bg: bgHome, opts: [
+    { text: "18-19°C", points: 10, tip: "<strong>Tanács: </strong> Ez energiatakarékos, de ha kényelmi panasz van (főleg ülő tevékenységnél), helyi megoldások (melegebb takarók, réteges öltözködés, helyi hősugárzó rövid használata) javíthatják a komfortot anélkül, hogy a teljes fűtési igényt növelnéd. Optimalizáld a páratartalmat (túlszáraz levegő hideg érzetet adhat). <br><br><strong>Érdekesség: </strong>Minden 1 °C csökkentés átlagosan 6–10% fűtési energia-megtakarítást hozhat, így 18–19 °C jelentős megtakarításnak számít." },
+    { text: "20-21°C", points: 35, tip: "<strong>Tanács: </strong> Ez a tipikus kompromisszum a komfort és megtakarítás között. Programozható termosztáttal időszakokra (pl. éjszakára, távozáskor) csökkenthetsz, és csak szükség szerint emeld a hőfokot. Helyiségenként állítsd be az ideális értéket (hálószoba hűvösebb lehet, nappali melegebb). <br><br><strong>Érdekesség: </strong>20–21 °C a legtöbb európai háztartásban alapbeállításként jellemző — jó kiindulási pont a további optimalizáláshoz." },
+    { text: "22-23°C", points: 65, tip: "<strong>Tanács: </strong> 22 °C fölött már jelentősen nő az energiafelhasználás; vizsgáld meg, miért tartod ilyen melegnek a lakást (rossz szigetelés, nem megfelelő zónavezérlés, komfortigény). Kísérletezz nappali és éjszakai különbséggel, és szigorúbb hőmérséklet-szabályozást vezess be. <br><br><strong>Érdekesség: </strong>A magasabb hőmérséklet nem lineárisan növeli a komfortot — 1–2 °C különbség gyakran nem érződik arányosan, viszont az energiaigényre jelentős hatása van." },
+    { text: "24-25°C", points: 100, tip: "<strong>Tanács: </strong> Ilyen magas kényelmi beállítás esetén az energiatakarékosság és a kibocsátás drámai romlására számíts; javasolt 1–2 °C csökkentés praktikákkal (ruhadivat, térfűtés) és a ház szigetelésének javítása. Ellenőrizd, nem mér-e hibásan a termosztát; gyakran egyszerű szabályozási probléma okozza a magasan tartott hőmérsékletet. <br><br><strong>Érdekesség: </strong>24–25 °C fűtésnél a fűtési költségek gyakran lényegesen magasabbak — sokan alulbecsülik, mennyit számít ez anyagilag és klimatikusan." },
+    { text: "26°C felett", points: 140, tip: "<strong>Tanács: </strong> Ez energetikailag extrém magas. Javasolt átgondolni tartósan ilyen hőmérséklet okát (pl. egészségi problémák), és ha lehetséges, konzultálni energiatanácsadóval: korszerűsítés, árnyékolás, zónázás és szabályozás bevezetése sürgős. Ha ez rövid távú igény (pl. betegség), alkalmazz helyi fűtőmegoldásokat a teljes rendszernövelés helyett. <br><br><strong>Érdekesség: </strong>Minden +1 °C emelkedés az energiaszámlán és a CO₂-lábnyomon érezhető; 26 °C felett már gyakran a fogyasztás többszöröse az optimális értékhez képest." },
+    { text: "Nem szabályozható", points: 50, tip: "<strong>Tanács: </strong> Ha nem tudod szabályozni a hőmérsékletet, vizsgáld meg a rendszer korlátait: hiányzó termosztát, központi távhő szabályozás, vagy műszaki hiba. Kérj szakértői felmérést a zóna-szabályozás, radiátorszelepek és termosztátok telepítéséről — gyakran kis beruházással jelentős megtakarítás érhető el. <br><br><strong>Érdekesség: </strong>Szabályozhatóság hiányában a felesleges fűtés nagy energia- és költségveszteséget okoz; sok épületben a legegyszerűbb zónavezérlés is gyors megtérüléssel jár." }
+  ]},
+  { q: "Milyen az elektromos gépeid energiahatékonysága?", bg: bgHome, opts: [
+    { text: "Minden gépem modern", points: 10, tip: "<strong>Tanács: </strong> Jó alap; tartsd karban az eszközöket (mosógép, hűtő, bojler) és használd energiatakarékos üzemmódokat. Gondolkodj intelligens elosztásban: csúcsidőn kívüli töltés, napelemes háztartási integráció, és készülékek kihasználtságának optimalizálása (pl. mosás tele töltettel). <br><br><strong>Érdekesség: </strong>Modern A+/A++ készülékek éves fogyasztása gyakran töredéke a 10–15 évvel ezelőtti modellekének — hosszú távon jelentős megtakarítást hoznak." },
+    { text: "A többség modern", points: 30, tip: "<strong>Tanács: </strong> Prioritás a régebbi, legnagyobb fogyasztók cseréje (hűtőszekrény, kazán vezérlése, vízmelegítő), és a használati szokások finomhangolása. Energiamonitorral azonosítsd, melyik eszköz fogyaszt a legtöbbet, és célzottan cseréld vagy üzemeltesd hatékonyabban. <br><br><strong>Érdekesség: </strong>Gyakran néhány „energiabajnok” készülék (pl. régi hűtő) adja az otthoni elektromos fogyasztás jelentős részét — ezek cseréje gyorsan megtérül." },
+    { text: "Vegyes", points: 55, tip: "<strong>Tanács: </strong> Készíts listát a készülékekről és azok életkoráról; cserélni a legnagyobb fogyasztókat és javítani a használati szokásokat. Használj konnektorba dugható fogyasztásmérőt pár hétig, hogy konkrét adatokat kapj, és ezek alapján dönts beruházásról. <br><br><strong>Érdekesség: </strong>Vegyes állomány esetén a megtakarítási potenciál nagy, mert a modern gépek és a régi darabok közti különbség jelentős." },
+    { text: "A többség régi", points: 95, tip: "<strong>Tanács: </strong> Prioritás a fő energiafalók (hűtő, bojler, mosógép) cseréje modernebb, energiaosztályos készülékre; közben változtasd meg a használati szokásokat (pl. alacsony hőfokon mosás). Keress támogatásokat és csereprogramokat — sok helyen elérhetők ösztönzők. <br><br><strong>Érdekesség: </strong>Régi készülékek élettartam-százaléka mellett az üzemeltetési költségük gyakran többszöröse az új eszközökének." },
+    { text: "Minden gépem elavult", points: 135, tip: "<strong>Tanács: </strong> Azonnali audit javasolt: listázd a 3 legnagyobb fogyasztót és cseréld őket elsőként; közben egyszerű karbantartási lépéseket (hűtő tömítések, légszűrők) végezz el. Tervezd meg a cserélési ütemtervet költség/hosszú távú megtakarítás alapján. <br><br><strong>Érdekesség: </strong>Egyetlen nagy fogyasztó (pl. régi hűtő, elektromos bojler) lecserélése akár 20–30% csökkenést hozhat az éves áramfogyasztásban." },
+    { text: "Nem tudom", points: 50, tip: "<strong>Tanács: </strong> Ellenőrizd a készülékek energiacímkéjét, és ha nincs, mérd meg rövid időre fogyasztásmérővel a háztartás legnagyobb eszközeit. Ez ad konkrét alapot, hogy melyik eszközt érdemes először cserélni vagy karbantartani. <br><br><strong>Érdekesség: </strong>Sok háztartás alábecsüli egy-egy eszköz tényleges fogyasztását; egy egyszerű mérés gyorsan megmutatja a prioritásokat." }
+  ]},
+  { q: "Mennyire tudatosan használod a világítást és az áramot?", bg: bgHome, opts: [
+    { text: "Mindenhol LED, mindig lekapcsolom", points: 5, tip: "<strong>Tanács: </strong> Kiváló alap: folytasd így, és bővítsd energiatudatos szokásaidat hálózati eszközök intelligent kikapcsolására (standby mentesítése), időzítők/okos konnektorok használatára. Használj mozgásérzékelőt ritkán használt terekben (folyosó, kamra). <br><br><strong>Érdekesség: </strong>LED-ek kevesebb energiát és hőt termelnek — hosszú távon nemcsak áramot, hanem hűtési költséget is spórolnak." },
+    { text: "Igyekszem figyelni", points: 25, tip: "<strong>Tanács: </strong> Konkrét rutinokat vezess be: mindig tele mosógép/mosogatógép, töltők kihúzása használat után, standby-k minimalizálása. Használj okos mérőt vagy energiamonitor-t, hogy láthatóvá váljon a javulás. <br><br><strong>Érdekesség: </strong>A szándékos figyelem gyakran hatékonyabb, ha konkrét számokkal párosul — az energiakövetés motiváló és mérhető eredményt ad." },
+    { text: "Átlagosan", points: 55, tip: "<strong>Tanács: </strong> Az „átlag” sok lehetőséget rejt: kezdj egyszerű, mérhető lépésekkel (LED-re váltás, konnektor-sorok kikapcsolása egyetlen kapcsolóval, időzítők). Fokozatosan emeld a tudatosságot: heti „áramszokás audit” és célok kitűzése. <br><br><strong>Érdekesség: </strong>Kis módosítások (pl. 10–15 perc rutinváltoztatás naponta) összességében jelentős energia- és költségcsökkenést eredményezhetnek." },
+    { text: "Csak néha figyelek", points: 90, tip: "<strong>Tanács: </strong> Automatizálj: mozgásérzékelők, okos konnektorok és időkapcsolók sokat segítenek a következetességben. Tűzz ki kis célokat (pl. egy hónapig napi 2 konnektor kihúzása), és építsd be a szokásokat. <br><br><strong>Érdekesség: </strong>Az automatizáció visszaforgatja a „néha” problémát: egyszer beállítva hosszú távon takarékoskodik anélkül, hogy a háztartás tagjainak folyamatosan emlékezniük kellene." },
+    { text: "Soha nem kapcsolok le semmit", points: 130, tip: "<strong>Tanács: </strong> Ez nagy javulási potenciált jelent: kezdd a legegyszerűbb lépéssel (töltők lehúzása, TV és számítógép kikapcsolása) és haladj az okos elosztók felé. Kisebb változtatások gyors eredményt hoznak, és motiválóak lesznek a további lépésekhez. <br><br><strong>Érdekesség: </strong>Az eszközök várakozó (standby) fogyasztása gyakran 5–10% közötti része lehet a háztartás elektromos számlájának — ennyit már azonnal megtakaríthatsz egyszerű kikapcsolással." },
+    { text: "Vegyes", points: 45, tip: "<strong>Tanács: </strong> Azonosítsd, mely helyzetekben vagy következetes és melyekben nem; célzott automatizációval és egyszerű szabályokkal (pl. „minden este 22:00-kor a nappali konnektorai kikapcsolva”) egyenletesebbé teheted a magatartást. Oktasd a háztartás többi tagját — a közös szabályok hatékonyabbak. <br><br><strong>Érdekesség: </strong>A „vegyes” kategória a leggyorsabban javítható: néhány jól megválasztott eszköz és rutin csak pár hét alatt képes érezhető csökkenést adni a fogyasztásban." }
+  ]},
+
+  { q: "Mivel teszed meg a legtöbb kilométert a hétköznapokban?", bg: bgTransport, opts: [
+    { text: "Gyalog / Bicikli", points: 0, tip: "<strong>Tanács: </strong> Tartsd fenn a gyalog/bicikli opciót napi mobilitásra — karbantartott bicikli, jó láthatóság (lámpák, fényvisszaverők) és praktikus tárolás növeli a használatát. Tervezz rövidebb ügyintézéseket sűrítve; ahol lehetséges kombináld tömegközlekedéssel. <br><br><strong>Érdekesség: </strong>Rövid autóutakat kiváltó gyalog- vagy kerékpározás nemcsak CO₂-t spórol, hanem az egészségre is jelentős pozitív hatással van." },
+    { text: "Tömegközlekedés", points: 30, tip: "<strong>Tanács: </strong> Használj bérletet vagy mobiljegyet és időzítsd az utazásokat csúcsidőn kívül, ha lehet — kevesebb torlódás, gyorsabb utazás. Ha több átszállás van, keresd az egyszeri jegyet/átfedhető bérletet; támogasd a közösségi közlekedést (célzott javaslat a szolgáltatóknak, ha szükséges). <br><br><strong>Érdekesség: </strong>Egy jól kihasznált tömegközlekedési út egy emberre vetítve több tucat autóút CO₂-kibocsátását képes kiváltani naponta." },
+    { text: "Taxi", points: 60, tip: "<strong>Tanács: </strong> Telekocsival csökkenthető a kilométerarányos kibocsátás — szervezz rendszeres útmegosztást kollégákkal/szomszédokkal; használj megbízható platformot és egyeztess pontos szabályokat (parkolás, költségmegosztás). <br><br><strong>Érdekesség: </strong>Telekocsizás esetén egy autóban utazók száma jelentősen csökkenti az egy főre jutó CO₂-t és parkolóhely-igényt is." },
+    { text: "Saját autó", points: 110, tip: "<strong>Tanács: </strong> Optimalizáld útjaidat: tervezett rutinvásárlás, tömbösítés, eco-driving (egyenes gázpedál, fokozatos lassítás), rendszeres karbantartás és optimális gumiabroncs-nyomás. Ha lehetséges, nézd meg autómegosztó vagy hibrid/elektromos opciók bevezetését. <br><br><strong>Érdekesség: </strong>Eco-driving technikákkal (egyenletes sebesség, lassú gyorsítás) 10–20% közötti üzemanyag-megtakarítás érhető el városi forgalomban." },
+    { text: "Nagy terepjáró", points: 160, tip: "<strong>Tanács: </strong> Nagy terepjáró esetén fontold meg kisebb vagy hatékonyabb alternatíva vásárlását, ha nincs valódi terep- vagy vontatási igény. Rövid távon optimalizálás: sebességcsökkentés autópályán, súly csökkentése (nem szükséges felszerelés lepakolása), és rendszeres szerviz. <br><br><strong>Érdekesség: </strong>Nagy járművek fajlagos CO₂-kibocsátása sokkal magasabb; ha a használat jellemzően városi, a környezeti és pénzügyi költségek gyorsan nőnek." },
+    { text: "Vegyes", points: 55, tip: "<strong>Tanács: </strong> Dokumentáld havi szokásaidat (milyen napokon, miért használsz autót) és keresd az átállítható útvonalakat gyalog/bicikli/tömegközlekedésre. Használj kombinált hétköznapi stratégiát (pl. bicikli + vonat). <br><br><strong>Érdekesség: </strong>Vegyes mobilitásban nagy potenciál van a hétköznapok optimalizálására — már néhány rövidebb autómentes nap is mérhető megtakarítást hoz." }
+  ]},
+  { q: "Ha használsz autót, milyen típusú?", bg: bgTransport, opts: [
+    { text: "Nincs autóm", points: 0, tip: "<strong>Tanács: </strong> Jó alap — a továbbiakban támogasd a fenntartható mobilitást (bérlet, közösségi közlekedés, telekocsi). Ha szükség van időnként autóra, használj megosztó szolgáltatásokat, hogy minimalizáld a tulajdon költségeit és környezeti hatását. <br><br><strong>Érdekesség: </strong>Az autótulajdon elmaradása átlagban jelentős CO₂-csökkentést jelent egy háztartás életében." },
+    { text: "Elektromos", points: 20, tip: "<strong>Tanács: </strong> Optimalizáld töltést éjszaka vagy napelem-integráció esetén, kerüld a gyors töltéseket állandóan (NMC akkumulátorok élettartama miatt), és ellenőrizd a hálózati tarifaidat. Gondold át a „zöld töltés” forrásait — napelem + akkumulátor kombináció jelentősen csökkentheti a teljes élettartam-kibocsátást. <br><br><strong>Érdekesség: </strong>Elektromos autó teljes élettartam-kibocsátása függ a hálózat szén-intenzitásától; zöld energiával töltve a CO₂-előny jelentős." },
+    { text: "Hibrid", points: 50, tip: "<strong>Tanács: </strong> Használd ki a hibrid rendszerek regeneratív fékezését és a városi üzem előnyeit; rendszeres karbantartás és megfelelő gumik választása tovább csökkenti fogyasztást. Tervezd meg a gyakori, rövid utak helyett a kombinált hosszabb utakat, ahol a hibrid hatékonyabban működik. <br><br><strong>Érdekesség: </strong>Hibrid autók különösen városban hatékonyak, mert sok fékezés-csillapítási energia visszanyerhető." },
+    { text: "Kicsi benzin / dízel", points: 90, tip: "<strong>Tanács: </strong> Ha kis belsőégésű autód van, tartsd karban motorját és váltókapcsolási szokásaidat (magasabb sebességfokozat alacsony fordulaton), és fontold meg hosszú távon a váltást hibrid/elektromos rendszerre. Optimalizáld útjait, csökkentsd féktávokat és ne tarts felesleges terhet az autóban. <br><br><strong>Érdekesség: </strong>Kisautókkal is elérhető alacsonyabb fogyasztás, de az életciklus-kibocsátást a használati mintázat és a motortechnika erősen befolyásolja." },
+    { text: "Nagy fogyasztású", points: 150, tip: "<strong>Tanács: </strong> Piaci- vagy életmódváltoztatás javasolt (ha lehetséges kisebb autóra váltás). Rövid távon: vezess alacsonyabb sebességgel, tartsd karban motort, csökkentsd autóterhelést, és fontold meg üzemanyag-takarékos vezetési technikákat. <br><br><strong>Érdekesség: </strong>Nagy fogyasztású járműveknél egyetlen hosszú autóút CO₂-kibocsátása könnyen meghaladhat több tömegközlekedési utazásét." },
+    { text: "Átlagos", points: 60, tip: "<strong>Tanács: </strong> Optimalizálj üzemeltetést (használj eco-módot ha van), rendszeres karbantartás, guminyomás, könnyű vezetés; ha gyakran van szükség autóra, vizsgáld meg alternatív megoldásokat (telekocsi, megosztás). <br><br><strong>Érdekesség: </strong>Az „átlagos” autó esetén a vezetési stílus gyakran nagyobb hatással van a fogyasztásra, mint maga a technikai megoldás." }
+  ]},
+  { q: "Hány kilométert utazol autóval egy átlagos héten?", bg: bgTransport, opts: [
+    { text: "0-10 km", points: 5, tip: "<strong>Tanács: </strong> Jól állsz — tartsd fenn gyalog/bicikli opciókat a rövid utaknál és mérsékeld az autóhasználatot külön eseményekre. Karbantartás és időnkénti hosszabb út jó az autó állapotának fenntartásához. <br><br><strong>Érdekesség: </strong>0–10 km/hét autóhasználat sokkal kisebb éves CO₂-lábnyomot jelent, különösen ha a helyi mobilitás aktív." },
+    { text: "10-50 km", points: 30, tip: "<strong>Tanács: </strong> Használj kombinált stratégiát (pl. heti 1-2 autómentes nap), optimalizáld útvonalakat és próbálj meg telekocsit vagy tömegközlekedést bevonni a rutinszerű utazásokba. Karbantartás és eco-driving javasolt. <br><br><strong>Érdekesség: </strong>Közepes heti futásteljesítménynél a fogyasztási szokások és az autó hatékonysága nagyban befolyásolja az éves kibocsátást." },
+    { text: "50-150 km", points: 70, tip: "<strong>Tanács: </strong> Ez már jelentősebb használat — érdemes mérlegelni üzemanyag-fajtát, járműtípust és karbantartási gyakoriságot. Ha lehetséges, váltás hibrid/elektromos autóra komoly megtakarítást hozhat. Tervezd meg a heti útjaidat tömbösítve. <br><br><strong>Érdekesség: </strong>Ezen a tartományon belül a havi/éves szinten megtakarított liter/CO₂ értékek már számottevőek lehetnek egy kisebb beruházás hatására." },
+    { text: "150-300 km", points: 120, tip: "<strong>Tanács: </strong> Hosszabb távoknál érdemes a hatékonyságra fókuszálni: autóválasztás, jobb légellenállás (tetőcsomagtartó levétele amikor nem kell), GPS-alapú útoptimalizálás, és rendszeres üzemanyag-elemzés. Elektromos vagy hibrid átállás érdemi CO₂-csökkenést adhat. <br><br><strong>Érdekesség: </strong>Rendszeres hosszabb távoknál az autó életciklus-költsége és kibocsátása kiemelt szerepűvé válik a választásnál." },
+    { text: "300 km felett", points: 180, tip: "<strong>Tanács: </strong> Nagy kilométerfutásnál mind karbantartási, mind technológiai döntések fontosak: alacsony fogyasztású vagy villanyautó, telematika a fogyasztás optimalizálásához, töltési/tankolási stratégia. Vizsgáld meg, mennyire éri meg a saját autó fenntartása vs. flottamegoldások. <br><br><strong>Érdekesség: </strong>Nagy futásteljesítmény mellett a járműválasztás életciklus-kibocsátásra gyakorolt hatása dominál — egy hatékony váltás gyors megtérülést hozhat." },
+    { text: "Változó", points: 60, tip: "<strong>Tanács: </strong> Kövesd nyomon a havi kilométereket (applikációval vagy naplóval) és az alapján állíts be hosszú távú stratégiát: ha sok a hetek közti eltérés, kombinálj megosztás/tömegközlekedés/telekocsi elemeket a rugalmas igényekhez. <br><br><strong>Érdekesség: </strong>Változó használatnál a rugalmas mobilitási szolgáltatások (autómegosztás, rövid távú bérlés) sokszor költséghatékonyabbak és környezetbarátabbak lehetnek, mint a folyamatos tulajdon." }
+  ]},
+  { q: "Hányszor repültél Európán belül az elmúlt egy évben (oda-vissza)?", bg: bgTransport, opts: [
+    { text: "Soha", points: 0, tip: "<strong>Tanács: </strong> Kiváló — tartsd fenn a vasúti és helyi mobilitási megoldásokat; ha mégis utazol, a vonat gyakran alacsonyabb CO₂ és kényelmes alternatíva rövidebb távon. Érdemes felfedezni hálózati bérletek és éjszakai vonatok lehetőségét. <br><br><strong>Érdekesség: </strong>Rövid távú repülések (1–2 óra) CO₂/kilométer szempontjából különösen rosszak, vonattal a kibocsátás töredékére csökkenthető." },
+    { text: "1 út", points: 50, tip: "<strong>Tanács: </strong> Egy út évente általában még fenntartható; amortizáld a kibocsátást kompenzációval csak végső esetben, és preferáld a hosszú tartózkodást rövid, többszöri repülés helyett. Válassz közvetlen járatot, mert átszállások növelik a kibocsátást. <br><br><strong>Érdekesség: </strong>Egy oda-vissza rövid európai járat kibocsátása gyakran hasonló lehet egy teljes évnyi napi ingázás által okozott kibocsátáshoz." },
+    { text: "2-3 út", points: 120, tip: "<strong>Tanács: </strong> Mérlegeld, hogy ezek közül melyek helyettesíthetők vonattal vagy konferencia/üzleti esetén videóhívással. Ha repülsz, válassz alacsonyabb emissziójú légitársaságokat, közvetlen járatokat, és figyelj a fel- és leszállások során történő hatékonyságra. <br><br><strong>Érdekesség: </strong>Több rövid repülés évente gyorsan összegyűjti a CO₂-t — a rendszeres rövid járatok rosszabb hatásfokúak, mint néhány hosszabb távú utazás." },
+    { text: "4-6 út", points: 200, tip: "<strong>Tanács: </strong> Gyakori európai repülés jelentős karbonhatással jár; takarékossági stratégia: kombináld utakat, hosszabb tartózkodás helyett többszörös rövid járás. Vizsgáld az üzleti utak helyett a digitális találkozókat és szándékosan keress alternatív közlekedést, pl. vonatot. <br><br><strong>Érdekesség: </strong>Üzleti utazások gyakran magas CO₂-aránnyal bírnak még akkor is, ha a jegyek „gazdaságosak” — a repülés aránya gyorsan növeli a személyes éves lábnyomot." },
+    { text: "Havi szinten", points: 350, tip: "<strong>Tanács: </strong> Ez jelentős kibocsátás — készíts erőteljes csökkentési tervet: vonat/kompenzáció, utazási politika felülvizsgálata, és ahol lehetséges digitális meetingek. Ha muszáj repülnöd, egyes légitársaságok programjai és új üzemanyagok (SAF) részben csökkenthetik a hatást, de ez még kevés. <br><br><strong>Érdekesség: </strong>Havi repülés évente olyan mértékű CO₂-t generálhat, ami többszöröse egy átlagos európai háztartás teljes éves kibocsátásának." },
+    { text: "Ritkán", points: 60, tip: "<strong>Tanács: </strong> Ritka repülésnél fókuszálj a kompenzációra és a gyors, közvetlen járatokra; ha üzleti célú, próbálj meg kombinálni több célpontot egy úttal. Válogasd meg a távolságot és a céltudatosságot. <br><br><strong>Érdekesség: </strong>Ritkán is fontos stratégia, mert egyetlen repülés CO₂-hatása magas — megszűrt, tervezett utazás nagyobb fenntarthatóságot eredményez." }
+  ]},
+  { q: "Hányszor repültél más kontinensre (hosszú táv) az elmúlt egy évben?", bg: bgTransport, opts: [
+    { text: "Soha", points: 0, tip: "<strong>Tanács: </strong> Nagyon fenntartható állapot; ha kivételesen el kell utaznod, fontold meg hosszabb tartózkodást és a karbon-kompenzációt, illetve ügyelj a hosszútávú utazások ritkítására. <br><br><strong>Érdekesség: </strong>Egyetlen interkontinentális repülés CO₂-kibocsátása gyakran meghaladja egy évnyi városi autózásét." },
+    { text: "3 évente egyszer", points: 60, tip: "<strong>Tanács: </strong> Kifejezetten fenntartható ritmus — tervezd meg a hosszú tartózkodásokat és használd a lehetőséget helyi terep- és közlekedési alternatívák felfedezésére (vasút, helyi tömegközlekedés). Kompenzációt akkor is érdemes megfontolni. <br><br><strong>Érdekesség: </strong>Ritka, de hosszú távú utazásoknál a tartózkodás hossza jelentősen csökkenti az egy napra jutó CO₂-t, ha a tartózkodás hosszú." },
+    { text: "Évente egyszer", points: 200, tip: "<strong>Tanács: </strong> Ha évente repülsz hosszú távra, érdemes a többi utazás csökkentését, tartózkodás meghosszabbítását és a zöldebb járatvonalak keresését fontolóra venni. Vizsgáld meg a HPA/SAF és légitársaságok karboncsökkentési lépéseit. <br><br><strong>Érdekesség: </strong>Éves interkontinentális repülés már nagy hatással van az egyéni éves kibocsátásra; egyetlen ilyen út éves szinten nagymértékben növelheti a lábnyomot." },
+    { text: "Évente kétszer", points: 400, tip: "<strong>Tanács: </strong> Jelentős hatás — ahogy lehet, cseréld le rövidebb utakra, használj hosszabb tartózkodásokat, és kompenzáld a kibocsátást megbízható projektek által. Vizsgáld a vállalati/üzleti utazási alternatívákat, ha ez szakmai okból történik. <br><br><strong>Érdekesség: </strong>Két hosszú távú út évente gyakran a háztartás vagy egyéni mobilitás legnagyobb kibocsátási forrása lehet." },
+    { text: "Gyakori üzleti utak", points: 650, tip: "<strong>Tanács: </strong> Üzleti szervezeti szinten tiltakozó intézkedések, belső utazási politika (digitális első opciók), hosszabb üzleti tartózkodások és helyi megbízottak használata szükséges. Személyes szinten gyűjtsd a lehetőségeket a digitális részvételre. <br><br><strong>Érdekesség: </strong>Üzleti repülések gyakran magasabb emissziós intenzitásúak (gyors menetrend, fapados ritkábban), ezért a vállalati politika kulcsfontosságú a csökkentésben." },
+    { text: "Nem jellemző", points: 70, tip: "<strong>Tanács: </strong> Ha ritkán fordul elő, fókuszálj az utazás optimalizálására — kevesebb, hosszabb utak, kompenzáció és helyi közlekedési alternatívák alkalmazása. <br><br><strong>Érdekesség: </strong>Nem jellemző státusz lehetőséget ad a tudatos utazástervezésre anélkül, hogy jelentős lemondásokkal járna." }
+  ]},
+
+  { q: "Milyen gyakran veszel új ruhát magadnak?", bg: bgShopping, opts: [
+    { text: "Csak ha muszáj", points: 10, tip: "<strong>Tanács: </strong> Kiváló hozzáállás; tovább fokozhatod a fenntarthatóságot minőségi, javítható darabok és semleges színek választásával, amelyek könnyen kombinálhatók. Tarts karbantartási rutint (folttisztítás, gombpótlás), hogy meghosszabbítsd a ruhák élettartamát. <br><br><strong>Érdekesség: </strong>Ruhafogyasztás jelentősen csökkenthető a „capsule wardrobe” (kis, jól kombinálható ruhatár) stratégiával." },
+    { text: "Félévente", points: 30, tip: "<strong>Tanács: </strong> Tudatosítsd, mely alkalmakra veszel — részesítsd előnyben sokoldalú, jó minőségű darabokat, és nézz használt ruha opciókat (second-hand). Figyelj az anyagokra (pamut vs. újrahasznosított poliészter). <br><br><strong>Érdekesség: </strong>Félévente újítás megengedi a divatfrissítést, de a fenntarthatóság érdekében a minőség és sokoldalúság kulcs." },
+    { text: "Havonta", points: 70, tip: "<strong>Tanács: </strong> Havonta vásárolóknál nagyobb a kockázata impulzusvásárlásnak — vezess vásárlási listát és várakozási szabályt (pl. 48 óra), és keresd a tartós, javítható darabokat. Használd a csere- és kölcsönzési lehetőségeket alkalmi ruhákhoz. <br><br><strong>Érdekesség: </strong>Gyakori ruhavásárlásnál a „fast fashion” láncok gyakran rövidebb élettartamot és nagyobb környezeti terhelést jelentenek." },
+    { text: "Hetente", points: 120, tip: "<strong>Tanács: </strong> Hetente vásárlóknál erősen ajánlott költség- és vásárlási napló vezetése, impulzus-szűrők bevezetése és a ruhapolc auditja (mi van már meg). Keress helyi javítási lehetőségeket és minőségi darabokat. <br><br><strong>Érdekesség: </strong>Heti szintű ruhavásárlás jellemzően jelentős környezeti lábnyommal jár, mert gyors fogyasztást és rövid élettartamot eredményez." },
+    { text: "Minden trendet követek", points: 160, tip: "<strong>Tanács: </strong> Ha mindig a trendet követed, fontold meg a kölcsönzést különleges eseményekre, és tarts egy alapgarnitúrát, amelyhez csak kiegészítőket veszel. Prioritás a fenntartható márkák és a second-hand felület. <br><br><strong>Érdekesség: </strong>Divat-trendek költsége nemcsak pénzben, hanem jelentős környezeti terhelésben is mérhető — a körforgásos divat (circular fashion) alternatívája lehet." },
+    { text: "Változó", points: 50, tip: "<strong>Tanács: </strong> Dokumentáld miért és mikor veszel — ha szezonális vagy esemény-függő, használd a kölcsönzés-/csereopciókat és a minőség-orientált vásárlást. Állíts fel szabályokat (pl. 1 új darab havonta max). <br><br><strong>Érdekesség: </strong>Változó vásárlási minta jól optimalizálható tudatos vásárlási tervezéssel — sok impulzus elkerülhető egyszerű szabályokkal." }
+  ]},
+  { q: "Milyen arányban vásárolsz használt dolgokat (ruha, bútor, elektronika)?", bg: bgShopping, opts: [
+    { text: "80% felett", points: 5, tip: "<strong>Tanács: </strong> Kiemelkedő fenntarthatóság — bővítsd a javítási és restaurálási készségeket (varrás, bútorfelújítás), és taníts meg másokat is a körforgásos fogyasztásra; gondoskodj arról, hogy amit veszel, hosszú távon hasznos legyen. <br><br><strong>Érdekesség: </strong>Nagy arányú használt vásárlás drasztikusan csökkenti a gyártási CO₂-t és az új termékek iránti keresletet." },
+    { text: "Kb. a felét (50%)", points: 30, tip: "<strong>Tanács: </strong> Jó arány — növeld a magas értékű és rövidebb élettartamú termékek (bútor, elektronika) másodpiaci vásárlását. Használj hiteles platformokat és ellenőrizd a visszavételi/javítási lehetőségeket. <br><br><strong>Érdekesség: </strong>50% használt arány mellett a háztartás kibocsátása jelentősen csökkenthető, különösen ha a nagy energiaigényű termékek is használtan kerülnek beszerzésre." },
+    { text: "Ritkán (10%)", points: 65, tip: "<strong>Tanács: </strong> Kezdd a prioritásokkal: mely termékeknél érdemes használtan venni (bútor, eszközök)? Keresd a jó állapotú, tesztelt példányokat és kérj garanciát, ha van. Próbáld meg legalább 1–2 nagyobb tárgyat használtan beszerezni évente. <br><br><strong>Érdekesség: </strong>Még alacsony arányú használt vásárlás is jelentős hatást gyakorolhat, ha a nagy karbon-intenzitású termékeket célozzuk meg." },
+    { text: "Soha", points: 110, tip: "<strong>Tanács: </strong> Ha újat vásárolsz mindig, törekedj tartósságra, javíthatóságra és környezetbarát anyagokra. Vizsgáld a garanciákat és a termékjavítási lehetőségeket; fontold meg a használt alternatívák előnyeit. <br><br><strong>Érdekesség: </strong>Új termékek vásárlása a fogyasztási lánc minden pontján (gyártás, szállítás, csomagolás) további kibocsátást jelent — a használt opció gyakran olcsóbb és fenntarthatóbb." },
+    { text: "Csak luxus/új terméket", points: 150, tip: "<strong>Tanács: </strong> Ha ez a preferencia, válassz olyan márkákat, melyek fenntarthatósági átvilágítást nyújtanak, és biztosítanak javítási/alkatrész-ellátást. Hosszú élettartamú, klasszikus darabok választása csökkentheti az összköltséget és a környezeti terhelést. <br><br><strong>Érdekesség: </strong>A luxustermékek hosszú élettartama és jobb anyagminősége gyakran kompenzálhatja a magasabb gyártási kibocsátást, ha valóban hosszú ideig használják őket." },
+    { text: "Amikor szembejön", points: 45, tip: "<strong>Tanács: </strong> Tudatosítsd a véletlenszerű beszerezéseket: vegyél időt ellenőrzésre, végezz gyors keresést alternatívákra, és gondold át, szükséges-e. Állíts be mentális/konkrét szabályt a vásárlás jóváhagyására. <br><br><strong>Érdekesség: </strong>Sok „spontán” vásárlás elkerülhető egyszerűen egy 24–48 órás várakozással — ez csökkenti a túlzott vásárlást." }
+  ]},
+  { q: "Mennyi ideig használsz egy mobiltelefont vagy laptopot?", bg: bgShopping, opts: [
+    { text: "7 év felett", points: 10, tip: "<strong>Tanács: </strong> Kiváló; tovább növeld az élettartamot jó karbantartással, akkumulátor-cserével és szoftverfrissítésekkel. Ha lehet, vásárolj javítható, alkatrészkönnyen cserélhető modelleket a következő eszközre is. <br><br><strong>Érdekesség: </strong>Hosszú használat csökkenti a gyártási CO₂-hoz való hozzájárulást, ami az eszköz teljes élettartamának nagy részét adja." },
+    { text: "4-6 évig", points: 35, tip: "<strong>Tanács: </strong> Jó élettartam — optimalizáld az eszköz karbantartását (védelem, akkumulátor-kezelés), és ha cserélsz, válassz javítható és szoftveresen tovább támogatott készüléket. Használd ki a másodpiacot az elavult eszköz értékesítésére. <br><br><strong>Érdekesség: </strong>4–6 év használat jelentősen csökkenti a havi „technológiai lábnyomot” a gyakori cserehelyzethez képest." },
+    { text: "2-3 évig", points: 75, tip: "<strong>Tanács: </strong> Ez a tipikus rövidebb ciklus; fontold meg hosszabb használat lehetőségét (szoftver-támogatás, akkumulátorcsere), és kerüld a divatos csere-okokat, ha a készülék műszakilag még jó. Javítási opciók keresése csökkenti a hulladékot. <br><br><strong>Érdekesség: </strong>2–3 év ciklusnál a gyártási kibocsátás dominál az eszköz teljes élettartam-kibocsátásában — ritkább cserével kevesebb CO₂ keletkezik." },
+    { text: "1-2 évig", points: 120, tip: "<strong>Tanács: </strong> Erősen javasolt a csereritmus csökkentése: tartsd meg a készüléket tovább karbantartással, és válassz kifejezetten javítható modelleket a következő vásárlásnál. Vizsgáld a felhő és szoftver követelmények okát — gyakran a frissítések gyorsítják a cserét. <br><br><strong>Érdekesség: </strong>Rövid ciklusoknál a hulladék és az elektronikai nyersanyagigény nő — ez társadalmi és ökológiai költségekkel jár." },
+    { text: "Félévente/évente cserélem", points: 170, tip: "<strong>Tanács: </strong> Ez fenntarthatatlan; sürgősen alakíts ki csere-stratégiát: legalább 3–5 évre tervezd a készülékeket, használd a használt piacot és javítási szolgáltatásokat. Állítsd be a költség- és környezetvédelmi kereteket a vásárlási döntésekhez. <br><br><strong>Érdekesség: </strong>Gyakori csere a legnagyobb hozzájáruló az elektronikai hulladékhoz és a kibocsátáshoz a technológiai szektorban." },
+    { text: "Amikor elromlik", points: 50, tip: "<strong>Tanács: </strong> Ez jóális elv — azonban nézd meg a szoftver-támogatást és az akkumulátor cserélhetőségét, mert sok eszköz „elromlás” helyett szoftveres elavulás miatt cserélődik. Ha lehet, javítasd a készüléket. <br><br><strong>Érdekesség: </strong>Az „amíg működik” stratégia általában a legkisebb környezeti hatású — különösen, ha az eszköz javítható." }
+  ]},
+  { q: "Hány csomagot rendelsz online egy átlagos hónapban?", bg: bgShopping, opts: [
+    { text: "0-1", points: 15, tip: "<strong>Tanács: </strong> Kiváló — ha mégis rendelsz, tömbösítsd a rendeléseket és válassz fenntartható szállítási opciót (kicsi csomag, együtt szállítás). Támogasd a helyi kereskedőket, amikor lehetséges. <br><br><strong>Érdekesség: </strong>Ritka online rendelés jelentősen csökkenti a csomagolási és szállítási CO₂-t." },
+    { text: "2-3", points: 45, tip: "<strong>Tanács: </strong> Jó szint — törekedj arra, hogy ugyanattól az eladótól egyszerre rendelj, és válaszd a lassabb, összevonható szállítást. Kerüld a „díjmentes visszaküldés” ösztönzését, ha gyakran visszaküldesz. <br><br><strong>Érdekesség: </strong>Több, de összevont rendelés általában kevesebb csomagolást és szállítást jelent, mint külön-külön rendelések." },
+    { text: "4-6", points: 85, tip: "<strong>Tanács: </strong> Fontold meg rendelési szokásaid racionalizálását: havonta egyszer nagyobb rendelés, ne többször kis csomagokban; minimalizáld a visszaküldéseket. Ellenőrizd a termékek fenntarthatósági adatlapját online. <br><br><strong>Érdekesség: </strong>Közepes rendelési gyakoriságnál a visszaküldések és kis csomagok jelentős többlet-terhelést jelentenek." },
+    { text: "7-10", points: 130, tip: "<strong>Tanács: </strong> Ez már jelentős csomagmennyiség — alakíts ki rendszert (pl. heti összegyűjtés) és csökkentsd a spontán vásárlást. Preferálj helyi üzleteket és csomagátvevő pontokat, valamint csomagmentes opciókat. <br><br><strong>Érdekesség: </strong>Sok kis csomag gyakoribb futározást és nagyobb csomagolási szennyezést generál, mintha ritkábban, de egyszerre rendelnél." },
+    { text: "Napi szinten", points: 180, tip: "<strong>Tanács: </strong> Erőteljesen javasolt vásárlási szokások felülvizsgálata: automatizált előfizetések átnézése, impulzus-vásárlás csökkentése; tömbösítés és helyi beszerzés. Gondolj arra is, hogy a napi csomagküldés logisztikailag és környezetileg nagyon költséges. <br><br><strong>Érdekesség: </strong>Napi csomagküldésnél a csomagszállítás logisztikai lábnyoma gyorsan magas szintre lép, különösen az expressz szállítások miatt." },
+    { text: "Havonta pár", points: 50, tip: "<strong>Tanács: </strong> Jó kompromisszum — törekedj a havonta egyszeri tömbösített rendelésre, és válaszd a fenntartható csomagolási opciókat/átvevőpontokat. Minimalizáld a visszaküldéseket. <br><br><strong>Érdekesség: </strong>Havonta pár rendelés okos tervezéssel alacsony többletterheléssel fenntartható." }
+  ]},
+  { q: "Mennyire részesíted előnyben a tartós, javítható termékeket az olcsóbbakkal szemben?", bg: bgShopping, opts: [
+    { text: "Csak tartósat/javíthatót veszek", points: 10, tip: "<strong>Tanács: </strong> Kiváló megközelítés — tovább növeld hatásod: informálódj alkatrész-ellátásról, javítóhálózatokról és vásárláskor kérd a hosszabb garanciát. Támogasd a javíthatóságot nyilvános értékeléssel. <br><br><strong>Érdekesség: </strong>Javítható és tartós termékek választása drasztikusan csökkenti az fogyasztási ciklust és hulladékot." },
+    { text: "Tájékozódom vásárlás előtt", points: 35, tip: "<strong>Tanács: </strong> Jó praxis — használj megbízható forrásokat (tesztek, javíthatósági indexek), és hasonlítsd össze a hosszú távú költséget (TCO) a vételár helyett. Kérdezd meg az eladót az alkatrész-utánpótlásról és szervizháttérről. <br><br><strong>Érdekesség: </strong>Tájékozottság gyakran azt eredményezi, hogy ugyanazért az árért tartósabb, javítható terméket találsz." },
+    { text: "Vegyes", points: 65, tip: "<strong>Tanács: </strong> Azonosítsd a termékosztályokat, ahol a tartósság kritikus (elektronika, bútor), és ott ragaszkodj a javítható opcióhoz; kisebb értékű, gyorsan elhasználódó cuccnál lehet olcsóbb megoldás. <br><br><strong>Érdekesség: </strong>Vegyes megközelítés növeli a rugalmat és segít optimalizálni költséget és környezeti hatást." },
+    { text: "Inkább az olcsót veszem", points: 100, tip: "<strong>Tanács: </strong> Olcsóbb megoldások rövid távon csábítanak, de hosszú távon költségesebbek lehetnek. Számold ki a megtérülést: hosszabb élettartam = kevesebb csere = kevesebb hulladék. Ha költség a fő szempont, keresd a jó ár-érték arányú, mégis tartós márkákat. <br><br><strong>Érdekesség: </strong>Olcsó termékek gyakran magasabb ökológiai költséggel járnak, ha gyakran cserélni kell őket." },
+    { text: "Kifejezetten eldobható termékeket veszek", points: 140, tip: "<strong>Tanács: </strong> Erősen ajánlott stratégia-váltás: helyettük keresd a többször használható, javítható alternatívákat; ha egyszerű a váltás (pl. eldobható evőeszköz → tartós), tedd meg azonnal. Vizsgáld a hulladékkezelés és költségek rejtett hatását. <br><br><strong>Érdekesség: </strong>Eldobható termékek gyorsan növelik a háztartási hulladékot és CO₂-terhelést, különösen egyszer használatos műanyagok esetén." },
+    { text: "Nem szempont", points: 50, tip: "<strong>Tanács: </strong> Helyezd a tartósságot a vásárlási döntések szempontjai közé (lista, súlyozás): például 10% pontszámot adj a tartósságnak az értékeléskor. Kérj energiacímkéket és javíthatósági információkat eladás előtt. <br><br><strong>Érdekesség: </strong>Sok vásárló számára a tartósság nem szempont; azonban kis viselkedésbeli változtatások nagy hatást tudnak gyakorolni." }
+  ]},
+
+  { q: "Milyen szinten gyűjtöd szelektíven a hulladékot?", bg: bgWaste, opts: [
+    { text: "Mindent külön", points: 5, tip: "<strong>Tanács: </strong> Kiváló — finomítsd a szelektált gyűjtést: tisztítsd/öblítsd az újrahasznosítható csomagolásokat, tanulmányozd a helyi gyűjtési szabályokat, és csökkentsd a műanyag használatát. Gondolj komposztra a szerves anyagokra. <br><br><strong>Érdekesség: </strong>Teljes szeparálás a legnagyobb hatású háztartási hulladékcsökkentő lépés, különösen ha a helyi rendszer hatékonyan kezeli az anyagokat." },
+    { text: "Papír / Műanyag", points: 35, tip: "<strong>Tanács: </strong> Kiterjesztheted más kategóriákra (üveg, fém, bio). Mindig ellenőrizd a konténerek tisztaságát: szennyezett anyagok sokszor a teljes konténer újrahasznosítását akadályozzák. <br><br><strong>Érdekesség: </strong>Papír és műanyag szelektív gyűjtése jó kiindulópont — de sok helyen az üveg és fém is könnyen újrahasznosítható és nagy hatással van." },
+    { text: "Csak üveg / elem", points: 70, tip: "<strong>Tanács: </strong> Bővítsd a szelektív gyűjtést, különösen a papírt és műanyagot is érdemes gyűjteni; az elemek külön gyűjtése fontos, mert veszélyes hulladékot tartalmaznak. Különítsd el az elektronikai hulladékot is speciális gyűjtőpontokra. <br><br><strong>Érdekesség: </strong>Elemek és akkumulátorok megfelelő gyűjtése megakadályozza a talaj- és vízszennyezést és értékes anyagokat ment meg." },
+    { text: "Ritkán", points: 100, tip: "<strong>Tanács: </strong> Kezdd egyszerűen: szerezz külön gyűjtőedényt papírnak, műanyagnak és szervesnek; állíts fel heti rutint. Ellenőrizd a helyi szabályokat és szombatonként add le a szelektált anyagot. <br><br><strong>Érdekesség: </strong>A „ritkán” gyakran egyszerű szokáson múlik — egy jól látható, kényelmes konténer és rutin sokat segít." },
+    { text: "Egyáltalán nem", points: 140, tip: "<strong>Tanács: </strong> Fontos elkezdeni: tartsd külön a papírt/műanyagot, és keresd a helyi gyűjtőpontokat. Kezdj kis lépésekkel: például heti 1 szelektív adag összeállítása. Hasznos lehet oktató anyagok áttekintése. <br><br><strong>Érdekesség: </strong>A szelektív gyűjtés elindítása az egyik legegyszerűbb módja annak, hogy rögtön csökkentsd a háztartásod környezeti lábnyomát." },
+    { text: "Amit tudok", points: 55, tip: "<strong>Tanács: </strong> Jó kiindulás — pontosítsd, mit tudsz: tarts egy auditot (milyen hulladék mennyi kerül a kukába), és célzottan csökkentsd a legnagyobb mennyiségeket (pl. csomagolás). <br><br><strong>Érdekesség: </strong>A hulladékaudit gyakran feltárja, hogy kevesebb mint 30% a komposztálható/műanyag, és sok elkerülhető csomagolás van." }
+  ]},
+  { q: "Hány darab eldobható (PET) palackos italt veszel egy héten?", bg: bgWaste, opts: [
+    { text: "Soha", points: 0, tip: "<strong>Tanács: </strong> Tartsd meg a gyakorlatot — ha lehetséges, használd újratölthető üveget és vizálló palackot. Figyelj arra is, hogy a szűrőrendszerek és csapvíz minősége megfelelő legyen (ha szükséges, szűrő/rendszer). <br><br><strong>Érdekesség: </strong>PET palackok jelentős műanyaghulladék-forrást jelentenek; elkerülésük az egyik legegyszerűbb hulladékcsökkentési lépés." },
+    { text: "Heti 1-2 darab", points: 30, tip: "<strong>Tanács: </strong> Jó szint — csökkentheted tovább újratölthető palackkal és kulaccsal; ha alkalmanként veszed, választ a visszaváltható üveg opciókat. <br><br><strong>Érdekesség: </strong>Heti 1–2 PET palack helyettesítése tartós palackkal évente több tucat palack megtakarítást jelent." },
+    { text: "Heti 3-7 darab", points: 75, tip: "<strong>Tanács: </strong> Érdemes átállni újratölthető megoldásra; webshopokban és boltokban visszaváltható üveg vagy nagy kiszerelés vásárlása csökkenti a hulladékot. Vizsgáld meg, miért kényelmesedett el a PET használat (kényelem, minőség vagy immunitás). <br><br><strong>Érdekesség: </strong>Heti több palack gyorsan sokévi PET-használattá nő — a fogyasztói viselkedés itt kulcs." },
+    { text: "Napi több", points: 130, tip: "<strong>Tanács: </strong> Erőteljes váltás ajánlott: nagy kulacs, vízszűrő otthonra/munkahelyre, és tudatossági kampány személyes rutinban. Közben figyeld a helyi vízminőséget és tinktúrákat (szűrők, palackcserélők). <br><br><strong>Érdekesség: </strong>Napi többszöri PET-fogyasztás jelentős műanyag-függőséget és hulladékot generál; a váltás gyors és hatékony." },
+    { text: "Csak palackozott vizet iszom", points: 180, tip: "<strong>Tanács: </strong> Ha egészség vagy íz miatt választod, vizsgáld meg nagy kiszerelésű visszaváltható palackok vagy vízadagolók lehetőségét, és ellenőrizd, nem költséghatékonyabb-e hosszú távon. <br><br><strong>Érdekesség: </strong>Sokan palackozott vizet választanak biztonsági okokból — de az infrastruktúra és szűrőmegoldások alternatívát adhatnak." },
+    { text: "Vegyes", points: 55, tip: "<strong>Tanács: </strong> Célzottan csökkentsd a PET-használatot munkahelyen és útközben: legyen mindig egy kulacsod kéznél, és keresd a töltőpontokat. <br><br><strong>Érdekesség: </strong>Vegyes használat gyorsan optimalizálható egyszerű eszközökkel (kulacs, szűrő)." }
+  ]},
+  { q: "Mit kezdesz a szerves konyhai hulladékkal?", bg: bgWaste, opts: [
+    { text: "Saját komposztom van", points: 5, tip: "<strong>Tanács: </strong> Kiváló — finomíts a komposztrálási technikán (arányszabályok, levegőztetés) és használd a komposztot a kertben vagy cserepes növényeken. Ha túl sok van, oszd meg közösségi kertekkel. <br><br><strong>Érdekesség: </strong>Saját komposzt csökkenti a hulladék mennyiségét és értékes talajanyagot ad vissza." },
+    { text: "Barna kukába teszem", points: 25, tip: "<strong>Tanács: </strong> Ha van szelektív bio-gyűjtés, ügyelj arra, hogy az anyag ne legyen szennyezett (pl. műanyag zacskók). Használj légmentes, szellős komposztáló zsákot vagy komposzt-kukát otthon. <br><br><strong>Érdekesség: </strong>A bio-hulladék elkülönítése sok városban közvetlenül biogáz- vagy komposztálórendszerekbe kerül, ami körkörös hasznosítást tesz lehetővé." },
+    { text: "Néha komposztálom", points: 60, tip: "<strong>Tanács: </strong> Növeld a gyakoriságot: tarts konyhai komposztgyűjtőt és egy kis kinti komposztládát vagy komposztzsákot. Kezdd heti rendszerességgel. <br><br><strong>Érdekesség: </strong>Rendszeres komposztálás egyszerűen bevezethető és jelentősen csökkenti a kommunális hulladékot." },
+    { text: "Ritkán figyelek rá", points: 95, tip: "<strong>Tanács: </strong> Kezdd kicsiben: egy vödör vagy konyhai bio-edény és egy heti leadás a barna kukába vagy a közösségi komposztpontba nagy javulást eredményez. <br><br><strong>Érdekesség: </strong>Sok háztartásban a „ritkán” szokás átfordítható kényelmi eszközökkel (zárt bio-edény, illatosítás)." },
+    { text: "Soha, megy a sima kukába", points: 135, tip: "<strong>Tanács: </strong> Erősen ajánlott váltás: konyhai biovödör + komposztpont vagy lakossági bio-szolgáltatás igénybevétele; minimalizáld a műanyag zacskó használatát biohulladékhoz. <br><br><strong>Érdekesség: </strong>A szerves hulladék a kommunális szemét nagy részét képezheti — elkülönítése csökkenti a lerakóba kerülő anyagokat és metánkibocsátást." },
+    { text: "Nincs rá lehetőségem", points: 50, tip: "<strong>Tanács: </strong> Ha nincs házi vagy helyi komposztálás, nézd meg közösségi komposztpontok, városi programok vagy harmadik fél szolgáltatók lehetőségét. Vízszintes minimalizálás: kevesebb élelmiszer-pazarlás, okos adagolás. <br><br><strong>Érdekesség: </strong>Még korlátozott infrastruktúrában is vannak kerületi/egyházi/kozmunális gyűjtőpontok, amikhez érdemes csatlakozni." }
+  ]},
+  { q: "Mi a sorsa a tönkrement tárgyaidnak?", bg: bgWaste, opts: [
+    { text: "Mindig megjavítom/javíttatom", points: 10, tip: "<strong>Tanács: </strong> Kiváló gyakorlat — bővítsd a kapcsolatot megbízható javítóműhelyekkel és dokumentáld javítási költségeket vs. csere. Oszd meg tapasztalataid, hogy növeld a helyi javító-kultúrát. <br><br><strong>Érdekesség: </strong>Javítás jelentősen csökkenti az új termékek iránti keresletet és a nyersanyagfelhasználást." },
+    { text: "A drágább dolgokat megjavíttatom", points: 35, tip: "<strong>Tanács: </strong> Kiterjesztheted a határt — sok olcsóbb termék javítása is költséghatékony lehet. Rangsorold a javítást az ökológiai költség alapján, ne csak az ár szerint. <br><br><strong>Érdekesség: </strong>Egy termék eseményköltségei (javítás vs. csere) gyakran nem tükrözik az ökológiai költséget — javítás gyakran előnyösebb." },
+    { text: "Néha megpróbálom", points: 65, tip: "<strong>Tanács: </strong> Legyen egy egyszerű szabály: először próbáld meg javítani (online útmutató, helyi műhely), ha nem jár sikerrel, cseréld. Készíts listát gyakori javítható tárgyakról. <br><br><strong>Érdekesség: </strong>Az egyszerű javítások (csavarcsere, akkumulátor, varrás) sok kis elektronikát és ruhadarabot menthetnek meg." },
+    { text: "Inkább újat veszek", points: 100, tip: "<strong>Tanács: </strong> Mielőtt új vásárlásba kezdesz, nézd át a javítási lehetőségeket és a teljes költséget (TCO). Keress fenntarthatóbb, javítható modelleket az új vásárlásnál. <br><br><strong>Érdekesség: </strong>Gyors csere viszonylag magas környezeti terhelést hoz — gyakran a javítás olcsóbb és jobb választás is." },
+    { text: "Azonnal kidobom", points: 140, tip: "<strong>Tanács: </strong> Erősen ajánlott viselkedésváltás: legalább egy próbát tegyél a javításra vagy add el/adományozd a javítható eszközöket. Használj helyi javító eseményeket (repair café). <br><br><strong>Érdekesség: </strong>Azonnali kidobás növeli az elektronikai és egyéb hulladék mennyiségét — sok esetben az eszköz még hasznosítható." },
+    { text: "Változó", points: 50, tip: "<strong>Tanács: </strong> Határozz szabályt a döntéshez: 1) javítási költség < 50% új ár -> javítás; 2) környezeti hatás figyelembevétele. Keresd a közösségi javító-opciókat. <br><br><strong>Érdekesség: </strong>Változó döntési mintán könnyen lehet javítani egy egyszerű szabályrendszer bevezetésével." }
+  ]},
+  { q: "Ha bevásárolni mész, mibe pakolod az árukat?", bg: bgWaste, opts: [
+    { text: "Mindig viszek saját szatyrot", points: 0, tip: "<strong>Tanács: </strong> Tarts több fazonú táskát (nagy textil, összecsukható kosár) és mosd rendszeresen; ösztönözd a családot/rokonokat is hasonlóan. Használj csomagolásmentes opciókat, ha elérhető. <br><br><strong>Érdekesség: </strong>Saját szatyor használata az egyik legegyszerűbb és leghatékonyabb háztartási hulladékcsökkentő intézkedés." },
+    { text: "Néha elfelejtem a szatyrot", points: 30, tip: "<strong>Tanács: </strong> Tarts egy extra, összehajtható táskát a táskádban/munkahelyen/kocsiban; rendszerezés (kulcstartóra akasztott táska) gyakran megoldja az elfelejtést. <br><br><strong>Érdekesség: </strong>Egy kis rutinváltoztatás (pénztárcába/telefon tokba tartott táska) drasztikusan csökkenti a nejlonhasználatot." },
+    { text: "Ritkán viszek magammal", points: 70, tip: "<strong>Tanács: </strong> Állíts be emlékeztetőt a telefonodon vagy helyezz egy tartalék szatyrot kézháromra — egyszerű rutinok hatásosak. Vizsgáld, miért nem viszed (kényelem, helyhiány) és orvosold azt. <br><br><strong>Érdekesség: </strong>A ritka saját szatyorhasználat mögött gyakran egyszerű logisztikai akadályok állnak, amelyeket könnyű orvosolni." },
+    { text: "Általában ott veszek szatyrot", points: 110, tip: "<strong>Tanács: </strong> Ha muszáj nejlont venni, válaszd a visszaváltható vagy vastagabb újrafelhasználható változatot; kerüld az egyszer használatos mikroszatyrokat. <br><br><strong>Érdekesség: </strong>A „bolti szatyor” gyakran rövid élettartamú — a fenntarthatóbb alternatíva hosszú távon olcsóbb." },
+    { text: "Mindenhez új nejlont használok", points: 150, tip: "<strong>Tanács: </strong> Erősen javasolt váltás: cseréld textil- vagy hálós szatyrokra; kezdj kicsiben (1–2 huzamosan használható táska). Számold ki, mennyi műanyagot takarítasz meg. <br><br><strong>Érdekesség: </strong>Egyetlen éven belül egy egyszer használatos szatyor helyett tartós szatyrok jelentősen csökkentik a hulladékot." },
+    { text: "Nem használok szatyrot", points: 50, tip: "<strong>Tanács: </strong> Ha ez azt jelenti, hogy üres kézzel vásárolsz vagy a termék helyben marad, tartsd fenn; ha viszont azt jelenti, hogy műanyagot használsz anélkül, változtass. Használj csomagolásmentes opciókat. <br><br><strong>Érdekesség: </strong>A tudatos csomagolás-kerülés a legegyszerűbb módja a hulladék mérséklésének." }
+  ]},
+
+  { q: "Milyen a tisztálkodási rutinod?", bg: bgWater, opts: [
+    { text: "3-5 perc zuhany", points: 10, tip: "<strong>Tanács: </strong> Kiváló — tartsd ezt a rövid rutint, használj víztakarékos zuhanyfejet (percenként kisebb literárammal) és zárd el a csapot a samponozás/kézmosás idejére. <br><br><strong>Érdekesség: </strong>Rövid zuhanyok napi szinten nagy mennyiségű vizet takarítanak meg: egy 5 perces zuhany lényegesen kevesebb vizet fogyaszt, mint egy fürdés." },
+    { text: "5-10 perc zuhany", points: 30, tip: "<strong>Tanács: </strong> Jó irány, de vizsgáld meg a zuhanyfej hatékonyságát; cserélj perlátoros vagy alacsony átfolyású zuhanyfejre, és alkalmazd a „zuhanystop” technikát (samponnál lezárt víz). <br><br><strong>Érdekesség: </strong>1–2 perc csökkentés jelentős éves vízmegtakarítást hozhat." },
+    { text: "10+ perc zuhany", points: 65, tip: "<strong>Tanács: </strong> Javasolt rövidíteni: állíts be emlékeztetőt (zenei idő, időzítő a telefonon) és cseréld alacsony átfolyású zuhanyfejre. Etabled cél (pl. 7 perc) és fokozatosan csökkentsd. <br><br><strong>Érdekesség: </strong>Hosszú zuhanyok nemcsak vízpazarlók, hanem energiafelhasználásban (vízmelegítés) is drágák." },
+    { text: "Napi fürdés kádban", points: 100, tip: "<strong>Tanács: </strong> Fürdés gyakran nagy vízfogyasztású — váltás heti pár kádra vagy kád-rövidítési stratégiára javasolt; ha mégis fürdesz, használj félig töltött kádakat. <br><br><strong>Érdekesség: </strong>Egy teljes kád gyakran többszörösét fogyasztja egy rövid zuhanynak." },
+    { text: "Napi több teli kád", points: 150, tip: "<strong>Tanács: </strong> Erősen javasolt napi rutin felülvizsgálata — mérsékelt csökkentés, váltás zuhanyra, vagy csak alkalmanként kád. Fontold meg, hogy a több kád nagy energia- és vízfogyasztást is jelent. <br><br><strong>Érdekesség: </strong>Napi többször kádban fürdés rövid időn belül hatalmas vízfogyasztást eredményez és terheli a melegvíz-ellátást." },
+    { text: "Változó", points: 45, tip: "<strong>Tanács: </strong> Azonosítsd a mintákat (mikor hosszú zuhany, mikor rövid) és állíts be egyszerű szabályokat (pl. hétköznap rövid, hétvége kényelem). Perlátor és időzítő használata mindig ajánlott. <br><br><strong>Érdekesség: </strong>Változó rutinok könnyen optimalizálhatók, ha mérsz egy-két hónapot és elemzed a mintát." }
+  ]},
+  { q: "Elzárod-e a csapot fogmosás vagy borotválkozás közben?", bg: bgWater, opts: [
+    { text: "Mindig", points: 5, tip: "<strong>Tanács: </strong> Kiváló — folytasd és terjeszd ezt a szokást a háztartás többi tagjaira; használj perc-érzékelős csapokat, ha lehetséges. <br><br><strong>Érdekesség: </strong>Csap elzárása fogmosás közben akár 6–12 liter vizet is megtakaríthat percenként." },
+    { text: "Igyekszem", points: 25, tip: "<strong>Tanács: </strong> Tedd következetessé: tarts egy matricát a tükörnél, vagy egy kis „fogmosás-stop” jelzést; tudatosság mellett automatizáció (perlator, mozgásérzékelő) hatékony. <br><br><strong>Érdekesség: </strong>A jó szándék gyakran hatékonyabb, ha egyszerű vizuális emlékeztetők kísérik." },
+    { text: "Félig-meddig", points: 55, tip: "<strong>Tanács: </strong> Tüntesd el az akadályokat (pl. kényelmetlenség) — használj tálcát, hogy a borotválkozáshoz szükséges vizet össze tudd gyűjteni; gyakorlati rutint alakíts ki (csap be → hab → csap ki → öblítés). <br><br><strong>Érdekesség: </strong>Még részleges csaplezárások is észrevehető megtakarítást eredményeznek, különösen ha többen élnek együtt." },
+    { text: "Csak a végén", points: 90, tip: "<strong>Tanács: </strong> Érdemes elzárni teljesen a használat közben is; dolgozz ki alternatív módszereket (szükség szerint tálcába vizet venni a borotválkozáshoz). <br><br><strong>Érdekesség: </strong>Csap végén való elzárása csak részben hatékonyabb — a közben folyt víz rengeteg elpazarolt mennyiséget ad össze." },
+    { text: "Végig folyik a víz", points: 130, tip: "<strong>Tanács: </strong> Azonnali viselkedésváltoztatás ajánlott: figyelmeztető jelzés a tükörnél, automata csapok/ perlátorok és tudatos gyakorlás. Kezdj kis lépéssel (1 hétig csap off gyakorlat). <br><br><strong>Érdekesség: </strong>Folyó csap mellett fogmosás extrém pazarlás: percenként akár 6–10 liter is elfolyhat." },
+    { text: "Vegyes", points: 45, tip: "<strong>Tanács: </strong> Határozd meg, mely helyzeteknél nem zársz el (pl. idősellátás, kényelmi okok) és oldd meg alternatív megoldásokkal; legyen egy egyszerű szabály (pl. csak az öblítéskor nyisd meg). <br><br><strong>Érdekesség: </strong>A „vegyes” kategória a leggyorsabban javítható egy kis tervezéssel és eszközökkel." }
+  ]},
+  { q: "Hogyan mosogatsz otthon?", bg: bgWater, opts: [
+    { text: "Gépben (tele töltve)", points: 15, tip: "<strong>Tanács: </strong> Kiváló — csak tele töltéssel és eco-programmal használd; ellenőrizd a gép energiaosztályát és használj alacsony hőfokot (energiatakarékos program). <br><br><strong>Érdekesség: </strong>Mosogatógép, ha teljesen tele és eco-programon használják, gyakran kevesebb vizet és energiát fogyaszt, mint a kézi mosogatás." },
+    { text: "Kézzel, állóvízben", points: 30, tip: "<strong>Tanács: </strong> Ez jobb, mint folyamatos folyóvíz alatt mosogatni; használj két medencét (mosó/öblítő) és gyűjtsd az öblítővizet növényöntözésre. <br><br><strong>Érdekesség: </strong>Állóvíz módszerrel jelentősen csökkenthető a vízfogyasztás kézi mosogatásnál."},
+    { text: "Kézzel, gyors folyóvízben", points: 70, tip: "<strong>Tanács: </strong> Próbáld meg a „két tál” módszert vagy használd a könnyű perlatorokat — a gyors folyó víz gyakran több vizet pazarol, mint gondolnád. <br><br><strong>Érdekesség: </strong>Gyors folyóvíz alatt mosogatva percenként több liter víz mehet el, így a megtakarítási lehetőség nagy." },
+    { text: "Kézzel, lassú folyóvízben", points: 110, tip: "<strong>Tanács: </strong> Lassú folyóvíz jobb, de még mindig jobb az állóvíz módszer; használd a mosogatószivacsokat hatékonyabban és öblítsd öblítővízben. <br><br><strong>Érdekesség: </strong>Lassan folyó víz csökkenti a pazarlást, de a gépi mosogatás gyakran még hatékonyabb." },
+    { text: "Végig folyóvíz alatt", points: 150, tip: "<strong>Tanács: </strong> Erőteljesen javaslom megváltoztatni a módszert: tele tál, mosás, öblítő tál, vagy mosogatógép használata. A végig folyó víz nagyon pazarló. <br><br><strong>Érdekesség: </strong>Végig folyó víz gyakran a háztartás vízfogyasztásának jelentős részét teszi ki." },
+    { text: "Változó", points: 50, tip: "<strong>Tanács: </strong> Célozd meg a gyakoribb, hatékonyabb módszert (pl. heti 90% tele mosogatógép vagy kézi: két tál), és monitorozd a változást. <br><br><strong>Érdekesség: </strong>Változó szokások optimalizálhatók egyszerű szabályokkal és berendezéssel." }
+  ]},
+  { q: "Van-e az otthonodban víztakarékos eszköz (perlátor a csapon, stop-gombos WC)?", bg: bgWater, opts: [
+    { text: "Mindenhol van", points: 10, tip: "<strong>Tanács: </strong> Kiváló — tartsd karban ezeket az eszközöket és ellenőrizd időszakonként a szivárgásokat; mérd a megtakarítást, és oszd meg a tapasztalatokat. <br><br><strong>Érdekesség: </strong>Perlátor és stop-gombos WC együttesen jelentős vizet takarítanak meg egy háztartásban." },
+    { text: "Csak a WC-n", points: 35, tip: "<strong>Tanács: </strong> Fontold meg perlátorok és alacsony átfolyású zuhanyfejek beszerzését; ezek olcsó, gyors megtérülésű beruházások. <br><br><strong>Érdekesség: </strong>A WC víztakarékossága nagy, de a zuhany és csapok is jelentős részt képviselnek a fogyasztásban." },
+    { text: "Tervezem a beszerzést", points: 60, tip: "<strong>Tanács: </strong> Tervezz költségvetést és vásárolj minőségi, könnyen felszerelhető eszközöket; sok esetben online van „self-fit” megoldás, vagy helyi szerelőt kérhetsz. <br><br><strong>Érdekesség: </strong>Perlátor és alacsony átfolyású zuhanyfej beszerelése gyakran 1–2 év alatt megtérül az alacsonyabb víz- és energiaszámlán." },
+    { text: "Nincs", points: 100, tip: "<strong>Tanács: </strong> Erősen ajánlott legalább a perlátor és a stop-gombos WC megfontolása; ezek egyszerű és költséghatékony víztakarékos eszközök. <br><br><strong>Érdekesség: </strong>Hiányuk miatt sok háztartás feleslegesen pazarolja a vizet — kis beruházással sokat nyerhetsz." },
+    { text: "Nincs, és nem is akarok", points: 140, tip: "<strong>Tanács: </strong> Próbáld megérteni az ellenállás okát (költség, esztétika) és keress kompromisszumokat (láthatatlan, diszkrét eszközök, olcsó megoldások). A hosszú távú megtakarítások jelentősek lehetnek. <br><br><strong>Érdekesség: </strong>Sok ellenállás praktikusan megoldható — a modern eszközök már esztétikusak és olcsók." },
+    { text: "Nem tudom", points: 50, tip: "<strong>Tanács: </strong> Ellenőrizd a csapokat és a WC-t: ha a csap kivehető perlátorral van ellátva, az rendelkezésre áll; ha nem, fontold a beszerzést. Kérj vízjegyzést vagy auditot. <br><br><strong>Érdekesség: </strong>Sok otthonban van alap vtakarékos eszköz, csak nem ismert — egy gyors szemrevételezés megmutatja." }
+  ]},
+  { q: "Hogyan gondozod a növényeidet (kert vagy szobanövény)?", bg: bgWater, opts: [
+    { text: "Esővízzel", points: 5, tip: "<strong>Tanács: </strong> Kiváló gyakorlat — telepíts esőgyűjtőt (barrel), és használj csepegtető öntözést a célnak megfelelő mennyiséghez. Szűrj le a vizet szükség szerint. <br><br><strong>Érdekesség: </strong>Esővíz használata nem csak takarékos, hanem jobb a növényeknek, mert lágyabb és kevesebb klórot tartalmaz." },
+    { text: "Célzott öntözéssel", points: 30, tip: "<strong>Tanács: </strong> Nagyszerű — használj csepegtető rendszert vagy locsolást reggel/este (kevésbé párolog), és mulcsot a talaj takarásához, hogy megtartsd a nedvességet. <br><br><strong>Érdekesség: </strong>Célzott öntözéssel akár 30–60% vízmegtakarítás érhető el a túlöntözéshez képest." },
+    { text: "Mindig csapvízzel", points: 70, tip: "<strong>Tanács: </strong> Használj reggeli/esti locsolást, mulcsot, és fontold meg az esővíz-gyűjtést, mert a csapvíz drágább és kevésbé fenntartható hosszú távon. <br><br><strong>Érdekesség: </strong>A csapvíz rendszeres használata nagyobb vízhasználathoz vezet — az ökolábnyom növelhető.." },
+    { text: "Automata rendszerrel naponta", points: 110, tip: "<strong>Tanács: </strong> Állítsd be az időzítést reggelre vagy estére, és mérsékeld a gyakoriságot (talaj nedvesség-érzékelő hasznos). Kerüld a napi automatikus túllocsolást. <br><br><strong>Érdekesség: </strong>Automata rendszerek hatékonyak, de ha nem konfigurálják jól, sok vizet pazarlanak." },
+    { text: "Pazarló locsolással", points: 150, tip: "<strong>Tanács: </strong> Sürgősen optimalizálj: csepegtető, mulcs, ésszerű öntözési időpontok, és talajnedvesség-érzékelők bevezetése. Kezdj heti audit-tal. <br><br><strong>Érdekesség: </strong>Pazarló locsolásnál a kert vízigénye a háztartás össz-vízhasználatának jelentős részét adhatja." },
+    { text: "Nincs növényem", points: 30, tip: "<strong>Tanács: </strong> Ha nincs növényed, nincs vízterhelés sem — ha tervezi növények beszerzését, válassz helyi, szárazságtűrő fajtákat és esővíz- vagy csepegtető rendszert. <br><br><strong>Érdekesség: </strong>Szárazságtűrő növények drasztikusan csökkenthetik a kert vízszükségletét, és növelik a biodiverzitást." }
+  ]}
+];
+
+let globalTonnes = 0;
+let globalNickname = "";
+
+async function generateCertificatePDF() {
+    const btn = document.getElementById('pdf-btn');
+    const originalText = btn.innerText;
+    btn.innerText = "Oklevél generálása...";
+    btn.disabled = true;
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        let bgPath = "";
+        if(globalTonnes < 2.0) bgPath = "./kep/oklevel/1.jpg";
+        else if(globalTonnes < 5.0) bgPath = "./kep/oklevel/2.jpg";
+        else if(globalTonnes < 8.0) bgPath = "./kep/oklevel/3.jpg";
+        else if(globalTonnes <= 12.0) bgPath = "./kep/oklevel/4.jpg";
+        else bgPath = "./kep/oklevel/5.jpg";
+
+        const img = new Image();
+        img.src = bgPath;
+        
+        img.onload = function() {
+    try {
+        doc.addImage(img, 'JPEG', 0, 0, 297, 210);
+        doc.setTextColor(255, 255, 255); 
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(45);
+        doc.text(globalNickname, 148.5, 100, { align: 'center' });
+        doc.setFontSize(16);
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}. ${String(today.getMonth() + 1).padStart(2, '0')}. ${String(today.getDate()).padStart(2, '0')}.`;
+        doc.text(dateStr, 60, 179);
+        const tonnesStr = `${globalTonnes.toFixed(2).replace('.', ',')} t / év`;
+        doc.text(tonnesStr, 225, 179); 
+        doc.save('Oko-Labnyom-Oklevel.pdf');
+        
+    } catch (err) {
+        console.error("PDF hiba:", err);
+        alert("Hiba történt a generálás során!");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+};
+        
+        img.onerror = function() {
+            alert("Hiba: Az oklevél háttérképe nem található ezen az úton: " + bgPath);
+            btn.innerText = originalText;
+            btn.disabled = false;
+        };
+
+    } catch (mainErr) {
+        console.error("PDF Könyvtár hiba:", mainErr);
+        alert("Hiba történt a PDF generáló betöltésekor. Kérlek ellenőrizd az internetkapcsolatot!");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const rawData = localStorage.getItem('ekoQuizData');
+    if(!rawData) {
+      document.getElementById('detailed-report').innerHTML = "<p style='text-align:center;'>Nincs megjeleníthető adat. Kérlek töltsd ki a kvízt a főoldalon!</p>";
+      return;
+    }
+
+    const data = JSON.parse(rawData);
+    const answersArr = Array.isArray(data.answers) ? data.answers : [];
+    let totalPoints = 0;
+    const maxPoints = questions.reduce((sum, q) => sum + Math.max(...q.opts.map(o => o.points)), 0);
+
+    answersArr.forEach((ansIdx, i) => {
+      if (ansIdx === -1) {
+        totalPoints += 50;
+      } else if (questions[i] && questions[i].opts[ansIdx]) {
+        totalPoints += questions[i].opts[ansIdx].points;
+      }
+    });
+
+    const tonnes = totalPoints / 250;
+    globalTonnes = tonnes;
+    globalNickname = (data.nickname || 'Ismeretlen').toUpperCase();
+    document.getElementById('res-nickname').innerText = `Köszönjük a kitöltést, kedves ${globalNickname}! Az eredményed:`;
+    
+    document.getElementById('res-points').innerText = `${totalPoints} / ${maxPoints} pont`;
+    document.getElementById('res-tonnes').innerText = `${tonnes.toFixed(2).replace('.', ',')} t`;
+
+    let resultCategory = '';
+    let bgImg = "";
+    if(tonnes < 2.0) { resultCategory = '🟢 Ökológiai Úttörő'; bgImg = "./kep/eredmeny/nagyonjo-bg.jpg"; }
+    else if(tonnes < 5.0) { resultCategory = '🟡 Tudatos Utazó'; bgImg = "./kep/eredmeny/jo-bg.jpg"; }
+    else if(tonnes < 8.0) { resultCategory = '⚪ Kiegyensúlyozott Fogyasztó'; bgImg = "./kep/eredmeny/kozepes-bg.jpg"; }
+    else if(tonnes <= 12.0) { resultCategory = '🟠 Nagy Lábnyomú'; bgImg = "./kep/eredmeny/rossz-bg.jpg"; }
+    else { resultCategory = '🔴 Kritikus Hatás'; bgImg = "./kep/eredmeny/nagyonrossz-bg.jpg"; }
+    
+    document.getElementById('res-category').innerText = resultCategory;
+
+    const bgLayer = document.getElementById('bg-layer');
+    if(bgLayer) bgLayer.style.backgroundImage = `url('${bgImg}')`;
+    const reportContainer = document.getElementById('detailed-report');
+    reportContainer.innerHTML = '';
+
+    const categories = [
+      { name: "I. Táplálkozás", bg: bgFood, start: 0, end: 5 },
+      { name: "II. Lakás és Energia", bg: bgHome, start: 5, end: 10 },
+      { name: "III. Közlekedés", bg: bgTransport, start: 10, end: 15 },
+      { name: "IV. Vásárlási szokások", bg: bgShopping, start: 15, end: 20 },
+      { name: "V. Hulladékgazdálkodás", bg: bgWaste, start: 20, end: 25 },
+      { name: "VI. Vízhasználat", bg: bgWater, start: 25, end: 30 }
+    ];
+
+    categories.forEach(cat => {
+      let catEarned = 0;
+      let catMax = 0;
+
+      for(let i = cat.start; i < cat.end; i++) {
+        const qObj = questions[i];
+        if(!qObj) continue;
+        catMax += Math.max(...qObj.opts.map(o => o.points));
+        const sIdx = answersArr[i];
+        if (sIdx === -1 || sIdx === undefined || !qObj.opts[sIdx]) {
+          catEarned += 50;
+        } else {
+          catEarned += qObj.opts[sIdx].points;
+        }
+      }
+
+      const catSection = document.createElement('div');
+      catSection.className = 'category-section';
+      catSection.style.backgroundImage = `linear-gradient(rgba(10,12,16,0.8), rgba(10,12,16,0.8)), url('${cat.bg}')`;
+      catSection.style.backgroundSize = 'cover';
+      catSection.style.backgroundPosition = 'center';
+
+      const catHead = document.createElement('div');
+      catHead.className = 'category-header';
+      catHead.innerHTML = `<span>${cat.name}</span> <span class="cat-points">${catEarned} / ${catMax} pont</span>`;
+      catSection.appendChild(catHead);
+
+      for(let i = cat.start; i < cat.end; i++) {
+        const qObj = questions[i];
+        if(!qObj) continue;
+
+        const selectedIdx = answersArr[i];
+        let answerText = "";
+        let displayPoints = 0;
+        let advice = "";
+
+        if (selectedIdx === -1 || selectedIdx === undefined || !qObj.opts[selectedIdx]) {
+          answerText = "Kihagyva";
+          displayPoints = 50;
+          advice = "Ezt a kérdést kihagytad. Ebben az esetben egy átlagérték (50 pont) adódott hozzá a pontjaidhoz!.";
+        } else {
+          const opt = qObj.opts[selectedIdx];
+          answerText = opt.text;
+          displayPoints = opt.points;
+          advice = opt.tip;
+        }
+
+        const item = document.createElement('div');
+        item.className = 'report-item';
+        item.innerHTML = `
+          <div class="q-title">${i + 1}. ${qObj.q}</div>
+          <div class="user-answer">
+            Válaszod: <strong style="color: white;">${answerText}</strong> 
+            <span style="color:var(--primary);font-weight:700;margin-left:8px;">(${displayPoints} pont)</span>
+          </div>
+          <div class="tip-box">${advice}</div>
+        `;
+        catSection.appendChild(item);
+      }
+      reportContainer.appendChild(catSection);
+    });
+
+  } catch (err) {
+    console.error('Hiba a jelentés generálásakor:', err);
+    document.getElementById('detailed-report').innerHTML = "<p style='text-align:center;'>Hiba történt a megjelenítés közben.</p>";
+  }
+});
+</script>
+</body>
+</html>
